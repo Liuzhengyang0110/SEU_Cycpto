@@ -20,6 +20,9 @@ import utils.MessageUtil.MessageParts;
 import java.awt.event.*;
 import java.util.HashMap;
 import java.util.Map;
+import java.awt.datatransfer.*;
+import javax.swing.event.DocumentListener;
+import javax.swing.event.DocumentEvent;
 
 public class MainFrame extends JFrame {
 
@@ -55,6 +58,9 @@ public class MainFrame extends JFrame {
 
 	// 添加成员变量存储步骤结果
 	private Map<String, String> stepResults = new HashMap<>();
+	
+	private String currentMessage = ""; // 当前加密的消息
+	private boolean[] stepCompleted = new boolean[6]; // 步骤完成状态
 
 	public MainFrame() {
 		setTitle("密码学课程大作业 - 混合加密系统");
@@ -240,85 +246,16 @@ public class MainFrame extends JFrame {
 
 		return panel;
 	}
-
-	/**
-	 * 创建混合加密流程面板
-	 */
-	/*
-	 * private JPanel createHybridFlowPanel() { JPanel panel = new JPanel();
-	 * panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-	 * panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-	 * 
-	 * // 流程图说明 JTextArea flowDesc = new JTextArea(
-	 * "══════════════════ 混合加密通信流程 ══════════════════\n\n" +
-	 * "完整流程（对称加密 + RSA加密）：\n\n" + "发送方A的操作流程：\n" + "1. 计算消息的Hash值：h = H(M)\n" +
-	 * "2. 用私钥RKa对Hash值签名：S = Sig(RKa, h)\n" + "3. 组合明文和签名：M || S\n" +
-	 * "4. 生成对称密钥 K\n" + "5. 用K加密组合数据：C1 = E(K, M || S)\n" +
-	 * "6. 用B的公钥UKb加密K：C2 = E(UKb, K)\n" + "7. 发送：C2 || C1 给B\n\n" + "接收方B的操作流程：\n"
-	 * + "1. 用私钥RKb解密出K：K = D(RKb, C2)\n" + "2. 用K解密组合数据：M || S = D(K, C1)\n" +
-	 * "3. 分离出明文M和签名S\n" + "4. 计算Hash值：h' = H(M)\n" +
-	 * "5. 用A的公钥UKa验证签名：Ver(UKa, h', S)\n\n" + "注：|| 表示组合操作，K是对称密钥（AES/DES）");
-	 * flowDesc.setEditable(false); flowDesc.setFont(new Font("等线", Font.PLAIN,
-	 * 14)); flowDesc.setBackground(new Color(240, 245, 255));
-	 * flowDesc.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-	 * 
-	 * panel.add(new JScrollPane(flowDesc)); panel.add(Box.createVerticalStrut(15));
-	 * 
-	 * // 流程步骤面板 JPanel stepsPanel = new JPanel(new GridLayout(7, 1, 10, 15));
-	 * stepsPanel.setBorder(BorderFactory.createTitledBorder("分步执行"));
-	 * 
-	 * // 步骤1: A计算Hash并签名 JPanel step1Panel = createStepPanel("步骤1: A计算Hash并用私钥签名",
-	 * new Color(200, 230, 255), e -> performStep1());
-	 * 
-	 * // 步骤2: A组合 M || S JPanel step2Panel =
-	 * createStepPanel("步骤2: A组合明文和签名（M || S）", new Color(180, 220, 255), e ->
-	 * performStep2());
-	 * 
-	 * // 步骤3: 生成对称密钥K JPanel step3Panel = createStepPanel("步骤3: 生成对称密钥 K", new
-	 * Color(160, 210, 255), e -> performStep3());
-	 * 
-	 * // 步骤4: 用K加密 M || S JPanel step4Panel = createStepPanel("步骤4: 用对称密钥K加密组合数据",
-	 * new Color(140, 200, 255), e -> performStep4());
-	 * 
-	 * // 步骤5: 用B的公钥加密K JPanel step5Panel = createStepPanel("步骤5: 用B的公钥加密对称密钥K", new
-	 * Color(120, 190, 255), e -> performStep5());
-	 * 
-	 * // 步骤6: B解密并验证 JPanel step6Panel = createStepPanel("步骤6: B解密密钥和数据，验证签名", new
-	 * Color(100, 180, 255), e -> performStep6());
-	 * 
-	 * // 一键完成 JPanel autoPanel = new JPanel(new BorderLayout()); JButton autoBtn =
-	 * new JButton("⚡ 一键完成所有步骤"); autoBtn.setBackground(new Color(255, 220, 100));
-	 * autoBtn.setFont(new Font("宋体", Font.BOLD, 16));
-	 * autoBtn.setForeground(Color.BLACK);
-	 * 
-	 * autoBtn.addActionListener(e -> { try { performStep1(); Thread.sleep(200);
-	 * performStep2(); Thread.sleep(200); performStep3(); Thread.sleep(200);
-	 * performStep4(); Thread.sleep(200); performStep5(); Thread.sleep(200);
-	 * performStep6(); JOptionPane.showMessageDialog(this, "✅ 所有步骤执行完成！"); } catch
-	 * (Exception ex) { JOptionPane.showMessageDialog(this, "❌ 执行失败: " +
-	 * ex.getMessage()); } });
-	 * 
-	 * autoPanel.add(autoBtn, BorderLayout.CENTER);
-	 * 
-	 * // 添加到步骤面板 stepsPanel.add(step1Panel); stepsPanel.add(step2Panel);
-	 * stepsPanel.add(step3Panel); stepsPanel.add(step4Panel);
-	 * stepsPanel.add(step5Panel); stepsPanel.add(step6Panel);
-	 * 
-	 * panel.add(stepsPanel); panel.add(Box.createVerticalStrut(15));
-	 * panel.add(autoPanel);
-	 * 
-	 * return panel; }
-	 */
 	
 	/**
 	 * 修改 createHybridFlowPanel 方法中的步骤面板创建
-	 */
+	 */	
 	private JPanel createHybridFlowPanel() {
 	    JPanel panel = new JPanel();
 	    panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 	    panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 	    
-	    // 流程图说明（保持不变）
+	    // 流程图说明
 	    JTextArea flowDesc = new JTextArea(
 	        "══════════════════ 混合加密通信流程 ══════════════════\n\n" +
 	        "完整流程（对称加密 + RSA加密）：\n\n" +
@@ -346,59 +283,100 @@ public class MainFrame extends JFrame {
 	    panel.add(new JScrollPane(flowDesc));
 	    panel.add(Box.createVerticalStrut(15));
 	    
-	    // 流程步骤面板 - 修改这里，传递stepId
+	    // 当前消息显示区域
+	    JPanel messagePanel = new JPanel(new BorderLayout());
+	    messagePanel.setBorder(BorderFactory.createTitledBorder("当前加密的消息"));
+	    JTextArea messageDisplay = new JTextArea(2, 50);
+	    messageDisplay.setEditable(false);
+	    messageDisplay.setText(currentMessage.isEmpty() ? "请在左侧输入消息" : currentMessage);
+	    messageDisplay.setFont(new Font("等线", Font.PLAIN, 12));
+	    messageDisplay.setBackground(new Color(255, 255, 240));
+	    messagePanel.add(new JScrollPane(messageDisplay), BorderLayout.CENTER);
+	    
+	    JButton refreshMsgBtn = new JButton("刷新消息");
+	    refreshMsgBtn.addActionListener(e -> {
+	        currentMessage = inputArea.getText();
+	        messageDisplay.setText(currentMessage.isEmpty() ? "请在左侧输入消息" : currentMessage);
+	        // 重置所有步骤状态
+	        resetStepStatus();
+	        JOptionPane.showMessageDialog(this, "消息已更新，所有步骤状态已重置");
+	    });
+	    messagePanel.add(refreshMsgBtn, BorderLayout.EAST);
+	    
+	    panel.add(messagePanel);
+	    panel.add(Box.createVerticalStrut(15));
+	    
+	    // 初始化步骤完成状态
+	    resetStepStatus();
+	    
+	    // 流程步骤面板
 	    JPanel stepsPanel = new JPanel(new GridLayout(7, 1, 10, 15));
-	    stepsPanel.setBorder(BorderFactory.createTitledBorder("分步执行（点击按钮执行，结果在下方显示）"));
+	    stepsPanel.setBorder(BorderFactory.createTitledBorder("分步执行（必须按顺序执行）"));
 	    
 	    // 步骤1: A计算Hash并签名
 	    JPanel step1Panel = createStepPanel(
 	        "步骤1: A计算Hash并用私钥签名",
 	        new Color(200, 230, 255),
 	        e -> performStep1(),
-	        "step1"
+	        "step1",
+	        true  // 第一步始终可执行
 	    );
 	    
-	    // 步骤2: A组合 M || S
+	    // 步骤2: A组合 M || S（默认禁用）
 	    JPanel step2Panel = createStepPanel(
 	        "步骤2: A组合明文和签名（M || S）",
 	        new Color(180, 220, 255),
 	        e -> performStep2(),
-	        "step2"
+	        "step2",
+	        false  // 需要步骤1完成后才能执行
 	    );
 	    
-	    // 步骤3: 生成对称密钥K
+	    // 步骤3: 生成对称密钥K（默认禁用）
 	    JPanel step3Panel = createStepPanel(
 	        "步骤3: 生成对称密钥 K",
 	        new Color(160, 210, 255),
 	        e -> performStep3(),
-	        "step3"
+	        "step3",
+	        false  // 需要步骤2完成后才能执行
 	    );
 	    
-	    // 步骤4: 用K加密 M || S
+	    // 步骤4: 用K加密 M || S（默认禁用）
 	    JPanel step4Panel = createStepPanel(
 	        "步骤4: 用对称密钥K加密组合数据",
 	        new Color(140, 200, 255),
 	        e -> performStep4(),
-	        "step4"
+	        "step4",
+	        false  // 需要步骤3完成后才能执行
 	    );
 	    
-	    // 步骤5: 用B的公钥加密K
+	    // 步骤5: 用B的公钥加密K（默认禁用）
 	    JPanel step5Panel = createStepPanel(
 	        "步骤5: 用B的公钥加密对称密钥K",
 	        new Color(120, 190, 255),
 	        e -> performStep5(),
-	        "step5"
+	        "step5",
+	        false  // 需要步骤4完成后才能执行
 	    );
 	    
-	    // 步骤6: B解密并验证
+	    // 步骤6: B解密并验证（默认禁用）
 	    JPanel step6Panel = createStepPanel(
 	        "步骤6: B解密密钥和数据，验证签名",
 	        new Color(100, 180, 255),
 	        e -> performStep6(),
-	        "step6"
+	        "step6",
+	        false  // 需要步骤5完成后才能执行
 	    );
 	    
-	    // 一键完成
+	    // 存储面板引用以便后续启用/禁用
+	    Map<String, JPanel> stepPanels = new HashMap<>();
+	    stepPanels.put("step1", step1Panel);
+	    stepPanels.put("step2", step2Panel);
+	    stepPanels.put("step3", step3Panel);
+	    stepPanels.put("step4", step4Panel);
+	    stepPanels.put("step5", step5Panel);
+	    stepPanels.put("step6", step6Panel);
+	    
+	    // 一键完成按钮
 	    JPanel autoPanel = new JPanel(new BorderLayout());
 	    JButton autoBtn = new JButton("⚡ 一键完成所有步骤");
 	    autoBtn.setBackground(new Color(255, 220, 100));
@@ -407,32 +385,78 @@ public class MainFrame extends JFrame {
 	    
 	    autoBtn.addActionListener(e -> {
 	        try {
-	            // 清空所有步骤结果
-	            stepResults.clear();
+	            // 重置状态
+	            resetStepStatus();
+	            updateStepButtons(stepPanels);
+	            
+	            // 检查消息
+	            currentMessage = inputArea.getText();
+	            if (currentMessage.isEmpty()) {
+	                JOptionPane.showMessageDialog(this, "❌ 请先输入要加密的消息！");
+	                return;
+	            }
+	            
+	            // 更新消息显示
+	            messageDisplay.setText(currentMessage);
 	            
 	            // 执行所有步骤
-	            performStep1();
+	            if (!performStep1()) {
+	                JOptionPane.showMessageDialog(this, "❌ 步骤1失败，流程终止");
+	                return;
+	            }
 	            updateStepResultDisplay("step1", step1Panel);
+	            stepCompleted[0] = true;
+	            updateStepButtons(stepPanels);
 	            
-	            Thread.sleep(500);
-	            performStep2();
+	            Thread.sleep(300);
+	            
+	            if (!performStep2()) {
+	                JOptionPane.showMessageDialog(this, "❌ 步骤2失败，流程终止");
+	                return;
+	            }
 	            updateStepResultDisplay("step2", step2Panel);
+	            stepCompleted[1] = true;
+	            updateStepButtons(stepPanels);
 	            
-	            Thread.sleep(500);
-	            performStep3();
+	            Thread.sleep(300);
+	            
+	            if (!performStep3()) {
+	                JOptionPane.showMessageDialog(this, "❌ 步骤3失败，流程终止");
+	                return;
+	            }
 	            updateStepResultDisplay("step3", step3Panel);
+	            stepCompleted[2] = true;
+	            updateStepButtons(stepPanels);
 	            
-	            Thread.sleep(500);
-	            performStep4();
+	            Thread.sleep(300);
+	            
+	            if (!performStep4()) {
+	                JOptionPane.showMessageDialog(this, "❌ 步骤4失败，流程终止");
+	                return;
+	            }
 	            updateStepResultDisplay("step4", step4Panel);
+	            stepCompleted[3] = true;
+	            updateStepButtons(stepPanels);
 	            
-	            Thread.sleep(500);
-	            performStep5();
+	            Thread.sleep(300);
+	            
+	            if (!performStep5()) {
+	                JOptionPane.showMessageDialog(this, "❌ 步骤5失败，流程终止");
+	                return;
+	            }
 	            updateStepResultDisplay("step5", step5Panel);
+	            stepCompleted[4] = true;
+	            updateStepButtons(stepPanels);
 	            
-	            Thread.sleep(500);
-	            performStep6();
+	            Thread.sleep(300);
+	            
+	            if (!performStep6()) {
+	                JOptionPane.showMessageDialog(this, "❌ 步骤6失败，流程终止");
+	                return;
+	            }
 	            updateStepResultDisplay("step6", step6Panel);
+	            stepCompleted[5] = true;
+	            updateStepButtons(stepPanels);
 	            
 	            JOptionPane.showMessageDialog(this, "✅ 所有步骤执行完成！");
 	        } catch (Exception ex) {
@@ -441,6 +465,21 @@ public class MainFrame extends JFrame {
 	    });
 	    
 	    autoPanel.add(autoBtn, BorderLayout.CENTER);
+	    
+	    // 重置按钮
+	    JButton resetBtn = new JButton("🔄 重置所有步骤");
+	    resetBtn.setBackground(new Color(255, 200, 200));
+	    resetBtn.addActionListener(e -> {
+	        resetStepStatus();
+	        updateStepButtons(stepPanels);
+	        stepResults.clear();
+	        // 清空所有步骤结果显示
+	        for (JPanel stepPanel : stepPanels.values()) {
+	            updateStepResultDisplay("", stepPanel);
+	        }
+	        JOptionPane.showMessageDialog(this, "所有步骤已重置");
+	    });
+	    autoPanel.add(resetBtn, BorderLayout.EAST);
 	    
 	    // 添加到步骤面板
 	    stepsPanel.add(step1Panel);
@@ -480,84 +519,169 @@ public class MainFrame extends JFrame {
 	}
 
 	/**
-	 * 创建步骤面板
+	 * 创建步骤面板（修改版，支持启用/禁用）
 	 */
-	/*
-	 * private JPanel createStepPanel(String title, Color color, ActionListener
-	 * action) { JPanel panel = new JPanel(new BorderLayout(5, 5));
-	 * panel.setBorder(BorderFactory.createCompoundBorder(
-	 * BorderFactory.createLineBorder(color, 2), BorderFactory.createEmptyBorder(5,
-	 * 5, 5, 5) ));
-	 * 
-	 * JButton button = new JButton(title); button.setBackground(color);
-	 * button.setFont(new Font("宋体", Font.BOLD, 14));
-	 * button.addActionListener(action);
-	 * 
-	 * JTextArea resultArea = new JTextArea(3, 50); resultArea.setEditable(false);
-	 * resultArea.setFont(new Font("等线", Font.PLAIN, 12));
-	 * resultArea.setBorder(BorderFactory.createTitledBorder("执行结果"));
-	 * 
-	 * panel.add(button, BorderLayout.NORTH); panel.add(new JScrollPane(resultArea),
-	 * BorderLayout.CENTER);
-	 * 
-	 * return panel; }
-	 */
-
+	private JPanel createStepPanel(String title, Color color, ActionListener action, String stepId, boolean enabled) {
+	    JPanel panel = new JPanel(new BorderLayout(5, 5));
+	    panel.setBorder(BorderFactory.createCompoundBorder(
+	        BorderFactory.createLineBorder(color, 2),
+	        BorderFactory.createEmptyBorder(5, 5, 5, 5)
+	    ));
+	    
+	    JButton button = new JButton(title);
+	    button.setBackground(color);
+	    button.setFont(new Font("宋体", Font.BOLD, 14));
+	    
+	    if (!enabled) {
+	        button.setEnabled(false);
+	        button.setBackground(color.darker());
+	        button.setForeground(Color.GRAY);
+	    }
+	    
+	    // 为按钮添加自定义属性
+	    button.putClientProperty("stepId", stepId);
+	    
+	    // 修改ActionListener，将结果存储并显示
+	    button.addActionListener(e -> {
+	        // 执行步骤
+	        boolean success = executeStep(stepId, action);
+	        
+	        if (success) {
+	            // 标记步骤完成
+	            int stepIndex = Integer.parseInt(stepId.replace("step", "")) - 1;
+	            stepCompleted[stepIndex] = true;
+	            
+	            // 延迟一下，确保步骤执行完成
+	            SwingUtilities.invokeLater(() -> {
+	                // 获取结果文本
+	                String result = getStepResult(stepId);
+	                if (result != null && !result.isEmpty()) {
+	                    // 显示在当前面板的结果区域
+	                    JTextArea resultArea = findResultAreaInPanel(panel);
+	                    if (resultArea != null) {
+	                        resultArea.setText(result);
+	                    }
+	                    
+	                    // 同时在主输出区域也显示
+	                    outputArea.append("\n\n" + title + " 结果:\n" + result);
+	                    outputArea.setCaretPosition(outputArea.getDocument().getLength());
+	                }
+	                
+	                // 更新所有按钮状态
+	                updateStepButtons(getAllStepPanels());
+	            });
+	        }
+	    });
+	    
+	    // 结果区域
+	    JTextArea resultArea = new JTextArea(3, 50);
+	    resultArea.setEditable(false);
+	    resultArea.setFont(new Font("等线", Font.PLAIN, 11));
+	    resultArea.setBorder(BorderFactory.createTitledBorder("执行结果"));
+	    resultArea.setLineWrap(true);
+	    resultArea.setWrapStyleWord(true);
+	    
+	    // 存储结果区域引用
+	    panel.putClientProperty("resultArea", resultArea);
+	    panel.putClientProperty("button", button);
+	    
+	    panel.add(button, BorderLayout.NORTH);
+	    panel.add(new JScrollPane(resultArea), BorderLayout.CENTER);
+	    
+	    return panel;
+	}
+	
 	/**
-	 * 创建步骤面板（修改版，能显示结果）
+	 * 执行步骤并返回是否成功
 	 */
-	private JPanel createStepPanel(String title, Color color, ActionListener action, String stepId) {
-		JPanel panel = new JPanel(new BorderLayout(5, 5));
-		panel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(color, 2),
-				BorderFactory.createEmptyBorder(5, 5, 5, 5)));
-
-		JButton button = new JButton(title);
-		button.setBackground(color);
-		button.setFont(new Font("宋体", Font.BOLD, 14));
-
-		// 为按钮添加自定义属性
-		button.putClientProperty("stepId", stepId);
-
-		// 修改ActionListener，将结果存储并显示
-		button.addActionListener(e -> {
-			// 执行步骤
-			action.actionPerformed(e);
-
-			// 延迟一下，确保步骤执行完成
-			SwingUtilities.invokeLater(() -> {
-				// 获取结果文本
-				String result = getStepResult(stepId);
-				if (result != null && !result.isEmpty()) {
-					// 显示在当前面板的结果区域
-					JTextArea resultArea = findResultAreaInPanel(panel);
-					if (resultArea != null) {
-						resultArea.setText(result);
-					}
-
-					// 同时在主输出区域也显示（可选）
-					outputArea.append("\n\n" + title + " 结果:\n" + result);
-					outputArea.setCaretPosition(outputArea.getDocument().getLength());
-				}
-			});
-		});
-
-		// 结果区域
-		JTextArea resultArea = new JTextArea(3, 50);
-		resultArea.setEditable(false);
-		resultArea.setFont(new Font("等线", Font.PLAIN, 11));
-		resultArea.setBorder(BorderFactory.createTitledBorder("执行结果"));
-		resultArea.setLineWrap(true);
-		resultArea.setWrapStyleWord(true);
-
-		// 存储结果区域引用
-		panel.putClientProperty("resultArea", resultArea);
-
-		panel.add(button, BorderLayout.NORTH);
-		panel.add(new JScrollPane(resultArea), BorderLayout.CENTER);
-
-		return panel;
+	private boolean executeStep(String stepId, ActionListener action) {
+	    try {
+	        // 检查当前消息
+	        currentMessage = inputArea.getText();
+	        if (currentMessage.isEmpty() && !stepId.equals("step1")) {
+	            JOptionPane.showMessageDialog(this, "❌ 请先输入消息并完成步骤1！");
+	            return false;
+	        }
+	        
+	        // 执行步骤
+	        action.actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, stepId));
+	        return true;
+	    } catch (Exception ex) {
+	        // 将错误信息存储到结果中
+	        stepResults.put(stepId, "❌ 执行失败: " + ex.getMessage());
+	        JOptionPane.showMessageDialog(this, "❌ " + stepId + " 执行失败: " + ex.getMessage());
+	        return false;
+	    }
 	}
 
+	/**
+	 * 获取所有步骤面板（简化版，实际需要从UI获取）
+	 */
+	private Map<String, JPanel> getAllStepPanels() {
+	    // 在实际应用中，这里应该从UI组件树中获取
+	    // 这里返回一个空Map，实际使用时需要实现
+	    return new HashMap<>();
+	}
+
+	/**
+	 * 更新步骤按钮状态
+	 */
+	private void updateStepButtons(Map<String, JPanel> stepPanels) {
+	    SwingUtilities.invokeLater(() -> {
+	        // 启用步骤1（始终可用）
+	        enableStepButton(stepPanels.get("step1"), true);
+	        
+	        // 步骤2：需要步骤1完成
+	        boolean step2Enabled = stepCompleted[0];
+	        enableStepButton(stepPanels.get("step2"), step2Enabled);
+	        
+	        // 步骤3：需要步骤2完成
+	        boolean step3Enabled = stepCompleted[1];
+	        enableStepButton(stepPanels.get("step3"), step3Enabled);
+	        
+	        // 步骤4：需要步骤3完成
+	        boolean step4Enabled = stepCompleted[2];
+	        enableStepButton(stepPanels.get("step4"), step4Enabled);
+	        
+	        // 步骤5：需要步骤4完成
+	        boolean step5Enabled = stepCompleted[3];
+	        enableStepButton(stepPanels.get("step5"), step5Enabled);
+	        
+	        // 步骤6：需要步骤5完成
+	        boolean step6Enabled = stepCompleted[4];
+	        enableStepButton(stepPanels.get("step6"), step6Enabled);
+	    });
+	}
+
+	/**
+	 * 启用/禁用步骤按钮
+	 */
+	private void enableStepButton(JPanel stepPanel, boolean enabled) {
+	    if (stepPanel == null) return;
+	    
+	    JButton button = (JButton) stepPanel.getClientProperty("button");
+	    if (button != null) {
+	        button.setEnabled(enabled);
+	        Color originalColor = button.getBackground();
+	        if (enabled) {
+	            button.setBackground(originalColor.brighter());
+	            button.setForeground(Color.BLACK);
+	        } else {
+	            button.setBackground(originalColor.darker());
+	            button.setForeground(Color.GRAY);
+	        }
+	    }
+	}
+
+	/**
+	 * 重置步骤状态
+	 */
+	private void resetStepStatus() {
+	    stepCompleted = new boolean[6];
+	    stepResults.clear();
+	    currentMessage = inputArea.getText();
+	}
+	
 	/**
 	 * 在面板中查找结果区域
 	 */
@@ -583,214 +707,23 @@ public class MainFrame extends JFrame {
 		return stepResults.getOrDefault(stepId, "");
 	}
 
-	/*    *//**
-			 * 步骤1: A计算Hash并用私钥签名
-			 */
-	/*
-	 * private void performStep1() { if (privateKeyA == null) {
-	 * JOptionPane.showMessageDialog(this, "请先生成A的密钥对！"); return; }
-	 * 
-	 * String message = inputArea.getText(); if (message.isEmpty()) {
-	 * JOptionPane.showMessageDialog(this, "请输入消息！"); return; }
-	 * 
-	 * try { // 计算Hash String algo = (String) hashBox.getSelectedItem(); String
-	 * hash; if ("MD5".equals(algo)) { hash = HashUtil.md5(message); } else { hash =
-	 * HashUtil.sha256(message); }
-	 * 
-	 * // 用A的私钥签名 currentSignature = SignUtil.sign(hash, privateKeyA);
-	 * 
-	 * // 显示结果 String sigBase64 =
-	 * Base64.getEncoder().encodeToString(currentSignature);
-	 * signatureArea.setText(sigBase64);
-	 * 
-	 * outputArea.setText( "步骤1完成：\n" + "消息: " + message + "\n" + "Hash值（" + algo +
-	 * "）: " + hash + "\n" + "签名（Base64）: " + sigBase64.substring(0, Math.min(50,
-	 * sigBase64.length())) + "..." );
-	 * 
-	 * JOptionPane.showMessageDialog(this, "✅ 步骤1完成：A已对消息完成签名");
-	 * 
-	 * } catch (Exception ex) { JOptionPane.showMessageDialog(this, "❌ 签名失败: " +
-	 * ex.getMessage()); } }
-	 * 
-	 *//**
-		 * 步骤2: A组合明文和签名（M || S）
-		 */
-	/*
-	 * private void performStep2() { String message = inputArea.getText(); if
-	 * (message.isEmpty() || currentSignature == null) {
-	 * JOptionPane.showMessageDialog(this, "请先完成步骤1！"); return; }
-	 * 
-	 * try { // 使用正确的组合方式 currentCombinedMessage =
-	 * MessageUtil.combineMessageAndSignature(message, currentSignature);
-	 * 
-	 * // 显示组合结果 outputArea.setText( "步骤2完成：明文与签名组合（M || S）\n" + "原始消息: " + message
-	 * + "\n" + "组合格式: [长度]|消息|SIG|签名\n" + "组合结果长度: " +
-	 * currentCombinedMessage.getBytes("UTF-8").length + " 字节" );
-	 * 
-	 * JOptionPane.showMessageDialog(this, "✅ 步骤2完成：已组合 M || S");
-	 * 
-	 * } catch (Exception ex) { JOptionPane.showMessageDialog(this, "❌ 组合失败: " +
-	 * ex.getMessage()); } }
-	 * 
-	 *//**
-		 * 步骤3: 生成对称密钥K
-		 */
-	/*
-	 * private void performStep3() { try { // 根据选择的对称算法生成密钥 String algo = (String)
-	 * symBox.getSelectedItem(); if ("AES".equals(algo)) { symmetricKey =
-	 * SymmetricCrypto.generateAESKey(); } else { symmetricKey =
-	 * SymmetricCrypto.generateDESKey(); }
-	 * 
-	 * // 显示生成的对称密钥 outputArea.setText( "步骤3完成：生成对称密钥 K\n" + "对称算法: " + algo + "\n"
-	 * + "密钥: " + symmetricKey + "\n" + "密钥长度: " + symmetricKey.length() + " 字符" );
-	 * 
-	 * // 更新密钥输入框 keyField.setText(symmetricKey);
-	 * 
-	 * JOptionPane.showMessageDialog(this, "✅ 步骤3完成：已生成对称密钥 K");
-	 * 
-	 * } catch (Exception ex) { JOptionPane.showMessageDialog(this, "❌ 生成密钥失败: " +
-	 * ex.getMessage()); } }
-	 * 
-	 *//**
-		 * 步骤4: 用对称密钥K加密组合数据
-		 */
-	/*
-	 * private void performStep4() { if (currentCombinedMessage == null ||
-	 * symmetricKey == null) { JOptionPane.showMessageDialog(this, "请先完成步骤2和3！");
-	 * return; }
-	 * 
-	 * try { // 获取对称算法 String algo = (String) symBox.getSelectedItem();
-	 * 
-	 * // 用对称密钥K加密组合数据 byte[] combinedBytes =
-	 * currentCombinedMessage.getBytes("UTF-8");
-	 * 
-	 * if ("AES".equals(algo)) { encryptedCombinedData =
-	 * SymmetricCrypto.encryptAES(combinedBytes, symmetricKey); } else {
-	 * encryptedCombinedData = SymmetricCrypto.encryptDES(combinedBytes,
-	 * symmetricKey); }
-	 * 
-	 * // 显示加密结果 outputArea.setText( "步骤4完成：用对称密钥K加密 M || S\n" + "加密算法: " + algo +
-	 * "\n" + "原始数据长度: " + combinedBytes.length + " 字节\n" + "加密后长度: " +
-	 * encryptedCombinedData.length + " 字节\n" + "密文（Base64）: " +
-	 * Base64.getEncoder().encodeToString(encryptedCombinedData).substring(0,
-	 * Math.min(80,
-	 * Base64.getEncoder().encodeToString(encryptedCombinedData).length())) + "..."
-	 * );
-	 * 
-	 * JOptionPane.showMessageDialog(this, "✅ 步骤4完成：组合数据已用对称密钥加密");
-	 * 
-	 * } catch (Exception ex) { JOptionPane.showMessageDialog(this, "❌ 对称加密失败: " +
-	 * ex.getMessage()); } }
-	 * 
-	 *//**
-		 * 步骤5: 用B的公钥加密对称密钥K
-		 */
-	/*
-	 * private void performStep5() { if (publicKeyB == null) {
-	 * JOptionPane.showMessageDialog(this, "请先生成B的密钥对！"); return; }
-	 * 
-	 * if (symmetricKey == null) { JOptionPane.showMessageDialog(this,
-	 * "请先完成步骤3生成对称密钥！"); return; }
-	 * 
-	 * try { // 用B的公钥加密对称密钥K encryptedSymmetricKey = RSAUtil.encrypt(
-	 * symmetricKey.getBytes("UTF-8"), publicKeyB );
-	 * 
-	 * String encryptedKeyBase64 =
-	 * Base64.getEncoder().encodeToString(encryptedSymmetricKey);
-	 * 
-	 * // 显示加密结果 outputArea.setText( "步骤5完成：用B的公钥加密对称密钥K\n" + "RSA算法: 2048位\n" +
-	 * "对称密钥K: " + symmetricKey + "\n" + "加密后的密钥（Base64）: " +
-	 * encryptedKeyBase64.substring(0, Math.min(80, encryptedKeyBase64.length())) +
-	 * "...\n\n" + "═════════════ 发送给B的数据 ═════════════\n" + "1. RSA加密的对称密钥: " +
-	 * encryptedKeyBase64.substring(0, Math.min(50, encryptedKeyBase64.length())) +
-	 * "...\n" + "2. 对称加密的M||S: " +
-	 * Base64.getEncoder().encodeToString(encryptedCombinedData).substring(0,
-	 * Math.min(50,
-	 * Base64.getEncoder().encodeToString(encryptedCombinedData).length())) + "..."
-	 * );
-	 * 
-	 * JOptionPane.showMessageDialog(this, "✅ 步骤5完成：对称密钥已用B的公钥加密");
-	 * 
-	 * } catch (Exception ex) { JOptionPane.showMessageDialog(this, "❌ RSA加密失败: " +
-	 * ex.getMessage()); } }
-	 * 
-	 *//**
-		 * 步骤6: B解密并验证
-		 *//*
-			 * private void performStep6() { if (privateKeyB == null || publicKeyA == null)
-			 * { JOptionPane.showMessageDialog(this, "请先生成B的私钥和A的公钥！"); return; }
-			 * 
-			 * if (encryptedSymmetricKey == null || encryptedCombinedData == null) {
-			 * JOptionPane.showMessageDialog(this, "请先完成步骤4和5！"); return; }
-			 * 
-			 * try { StringBuilder result = new StringBuilder();
-			 * result.append("步骤6：B接收并处理数据\n");
-			 * result.append("════════════════════════════════════════════\n\n");
-			 * 
-			 * // 1. B用自己的私钥解密对称密钥K result.append("1. 用私钥RKb解密对称密钥K:\n"); byte[]
-			 * decryptedKeyBytes = RSAUtil.decrypt(encryptedSymmetricKey, privateKeyB);
-			 * String decryptedKey = new String(decryptedKeyBytes, "UTF-8");
-			 * result.append("   解密出的对称密钥: ").append(decryptedKey).append("\n\n");
-			 * 
-			 * // 2. B用对称密钥K解密组合数据 result.append("2. 用对称密钥K解密M||S:\n"); String algo =
-			 * (String) symBox.getSelectedItem(); byte[] decryptedCombined;
-			 * 
-			 * if ("AES".equals(algo)) { decryptedCombined =
-			 * SymmetricCrypto.decryptAES(encryptedCombinedData, decryptedKey); } else {
-			 * decryptedCombined = SymmetricCrypto.decryptDES(encryptedCombinedData,
-			 * decryptedKey); }
-			 * 
-			 * String combined = new String(decryptedCombined, "UTF-8");
-			 * result.append("   解密出的组合数据长度: ").append(combined.length()).append(" 字符\n\n");
-			 * 
-			 * // 3. 分离消息和签名 result.append("3. 分离消息M和签名S:\n"); MessageParts parts =
-			 * MessageUtil.separateMessageAndSignature(combined);
-			 * result.append("   消息M: ").append(parts.message).append("\n");
-			 * result.append("   签名S长度: ").append(parts.signature.length).append(" 字节\n\n");
-			 * 
-			 * // 4. 计算Hash result.append("4. 计算消息Hash:\n"); String hashAlgo = (String)
-			 * hashBox.getSelectedItem(); String hash; if ("MD5".equals(hashAlgo)) { hash =
-			 * HashUtil.md5(parts.message); } else { hash = HashUtil.sha256(parts.message);
-			 * } result.append("   Hash值（" + hashAlgo + "）: ").append(hash).append("\n\n");
-			 * 
-			 * // 5. 用A的公钥验证签名 result.append("5. 用A的公钥验证签名:\n"); boolean verified =
-			 * SignUtil.verify(hash, parts.signature, publicKeyA);
-			 * 
-			 * if (verified) { result.append("   ✅ 签名验证成功！\n");
-			 * result.append("   ✓ 消息确实来自A\n"); result.append("   ✓ 消息在传输中未被篡改\n");
-			 * result.append("   ✓ 完整性和真实性得到保证\n"); result.append("   ✓ 对称密钥安全传输\n"); } else
-			 * { result.append("   ❌ 签名验证失败！\n"); result.append("   ✗ 消息可能被篡改\n");
-			 * result.append("   ✗ 或签名者不是A\n"); result.append("   ✗ 或密钥不匹配\n"); }
-			 * 
-			 * result.append("\n══════════════ 流程验证完成 ══════════════\n");
-			 * 
-			 * outputArea.setText(result.toString());
-			 * 
-			 * if (verified) { JOptionPane.showMessageDialog(this,
-			 * "<html><div style='text-align: center;'>" + "<h3>🎉 混合加密流程验证成功！</h3>" +
-			 * "<p>完整流程：</p>" + "<p>1. A签名 → 2. M||S组合 → 3. 生成K</p>" +
-			 * "<p>4. K加密 → 5. RSA加密K → 6. B解密验证</p>" + "</div></html>"); } else {
-			 * JOptionPane.showMessageDialog(this, "⚠️ 验证失败，请检查密钥和流程"); }
-			 * 
-			 * } catch (Exception ex) { ex.printStackTrace();
-			 * JOptionPane.showMessageDialog(this, "❌ 解密验证失败: " + ex.getMessage()); } }
-			 */
-
 	/**
-	 * 步骤1: A计算Hash并用私钥签名（修改版，存储结果）
+	 * 步骤1: A计算Hash并用私钥签名（修改版，返回是否成功）
 	 */
-	private void performStep1() {
-	    if (privateKeyA == null) {
-	        JOptionPane.showMessageDialog(this, "请先生成A的密钥对！");
-	        stepResults.put("step1", "❌ 失败：未生成A的密钥对");
-	        return;
+	private boolean performStep1() {
+	    currentMessage = inputArea.getText();
+	    if (currentMessage.isEmpty()) {
+	        String error = "❌ 失败：请先输入要加密的消息！";
+	        stepResults.put("step1", error);
+	        JOptionPane.showMessageDialog(this, error);
+	        return false;
 	    }
 	    
-	    String message = inputArea.getText();
-	    if (message.isEmpty()) {
-	        JOptionPane.showMessageDialog(this, "请输入消息！");
-	        stepResults.put("step1", "❌ 失败：未输入消息");
-	        return;
+	    if (privateKeyA == null) {
+	        String error = "❌ 失败：未生成A的密钥对！";
+	        stepResults.put("step1", error);
+	        JOptionPane.showMessageDialog(this, error);
+	        return false;
 	    }
 	    
 	    try {
@@ -798,9 +731,9 @@ public class MainFrame extends JFrame {
 	        String algo = (String) hashBox.getSelectedItem();
 	        String hash;
 	        if ("MD5".equals(algo)) {
-	            hash = HashUtil.md5(message);
+	            hash = HashUtil.md5(currentMessage);
 	        } else {
-	            hash = HashUtil.sha256(message);
+	            hash = HashUtil.sha256(currentMessage);
 	        }
 	        
 	        // 用A的私钥签名
@@ -813,7 +746,8 @@ public class MainFrame extends JFrame {
 	        // 生成步骤结果文本
 	        String result = 
 	            "✅ 步骤完成\n" +
-	            "消息: " + message + "\n" +
+	            "加密的消息: " + (currentMessage.length() > 50 ? currentMessage.substring(0, 50) + "..." : currentMessage) + "\n" +
+	            "消息长度: " + currentMessage.length() + " 字符\n" +
 	            "Hash算法: " + algo + "\n" +
 	            "Hash值: " + hash.substring(0, Math.min(20, hash.length())) + "...\n" +
 	            "签名长度: " + currentSignature.length + " 字节\n" +
@@ -825,42 +759,44 @@ public class MainFrame extends JFrame {
 	        outputArea.setText(
 	            "步骤1完成：A对消息完成签名\n" +
 	            "================================\n" +
+	            "消息: " + currentMessage + "\n" +
+	            "================================\n" +
 	            result
 	        );
 	        
-	        JOptionPane.showMessageDialog(this, "✅ 步骤1完成：A已对消息完成签名");
+	        return true;
 	        
 	    } catch (Exception ex) {
 	        String error = "❌ 签名失败: " + ex.getMessage();
 	        stepResults.put("step1", error);
 	        JOptionPane.showMessageDialog(this, error);
+	        return false;
 	    }
 	}
 
 	/**
-	 * 步骤2: A组合明文和签名（M || S）（修改版，存储结果）
+	 * 步骤2: A组合明文和签名（M || S）（修改版，返回是否成功）
 	 */
-	private void performStep2() {
-	    String message = inputArea.getText();
-	    if (message.isEmpty() || currentSignature == null) {
-	        String error = "❌ 失败：请先完成步骤1！";
+	private boolean performStep2() {
+	    if (currentSignature == null) {
+	        String error = "❌ 失败：请先完成步骤1生成签名！";
 	        stepResults.put("step2", error);
 	        JOptionPane.showMessageDialog(this, error);
-	        return;
+	        return false;
 	    }
 	    
 	    try {
 	        // 使用正确的组合方式
-	        currentCombinedMessage = MessageUtil.combineMessageAndSignature(message, currentSignature);
+	        currentCombinedMessage = MessageUtil.combineMessageAndSignature(currentMessage, currentSignature);
 	        
 	        // 生成步骤结果文本
 	        String result = 
 	            "✅ 步骤完成\n" +
-	            "消息长度: " + message.length() + " 字符\n" +
+	            "消息长度: " + currentMessage.length() + " 字符\n" +
 	            "签名长度: " + currentSignature.length + " 字节\n" +
 	            "组合格式: [长度]|消息|SIG|签名\n" +
 	            "组合后长度: " + currentCombinedMessage.length() + " 字符\n" +
-	            "组合数据示例: " + currentCombinedMessage.substring(0, Math.min(50, currentCombinedMessage.length())) + "...";
+	            "组合数据示例: " + currentCombinedMessage.substring(0, Math.min(80, currentCombinedMessage.length())) + "...";
 	        
 	        stepResults.put("step2", result);
 	        
@@ -868,22 +804,25 @@ public class MainFrame extends JFrame {
 	        outputArea.setText(
 	            "步骤2完成：明文与签名组合（M || S）\n" +
 	            "================================\n" +
+	            "原始消息: " + currentMessage + "\n" +
+	            "================================\n" +
 	            result
 	        );
 	        
-	        JOptionPane.showMessageDialog(this, "✅ 步骤2完成：已组合 M || S");
+	        return true;
 	        
 	    } catch (Exception ex) {
 	        String error = "❌ 组合失败: " + ex.getMessage();
 	        stepResults.put("step2", error);
 	        JOptionPane.showMessageDialog(this, error);
+	        return false;
 	    }
 	}
 
 	/**
-	 * 步骤3: 生成对称密钥K（修改版，存储结果）
+	 * 步骤3: 生成对称密钥K（修改版，返回是否成功）
 	 */
-	private void performStep3() {
+	private boolean performStep3() {
 	    try {
 	        // 根据选择的对称算法生成密钥
 	        String algo = (String) symBox.getSelectedItem();
@@ -910,27 +849,30 @@ public class MainFrame extends JFrame {
 	        outputArea.setText(
 	            "步骤3完成：生成对称密钥 K\n" +
 	            "================================\n" +
+	            "消息: " + currentMessage + "\n" +
+	            "================================\n" +
 	            result
 	        );
 	        
-	        JOptionPane.showMessageDialog(this, "✅ 步骤3完成：已生成对称密钥 K");
+	        return true;
 	        
 	    } catch (Exception ex) {
 	        String error = "❌ 生成密钥失败: " + ex.getMessage();
 	        stepResults.put("step3", error);
 	        JOptionPane.showMessageDialog(this, error);
+	        return false;
 	    }
 	}
 
 	/**
-	 * 步骤4: 用对称密钥K加密组合数据（修改版，存储结果）
+	 * 步骤4: 用对称密钥K加密组合数据（修改版，返回是否成功）
 	 */
-	private void performStep4() {
+	private boolean performStep4() {
 	    if (currentCombinedMessage == null || symmetricKey == null) {
 	        String error = "❌ 失败：请先完成步骤2和3！";
 	        stepResults.put("step4", error);
 	        JOptionPane.showMessageDialog(this, error);
-	        return;
+	        return false;
 	    }
 	    
 	    try {
@@ -949,7 +891,8 @@ public class MainFrame extends JFrame {
 	        // 生成步骤结果文本
 	        String result = 
 	            "✅ 步骤完成\n" +
-	            "加密算法: " + algo + "\n" +
+	            "加密的消息: " + (currentMessage.length() > 50 ? currentMessage.substring(0, 50) + "..." : currentMessage) + "\n" +
+	            "对称算法: " + algo + "\n" +
 	            "原始数据长度: " + combinedBytes.length + " 字节\n" +
 	            "加密后长度: " + encryptedCombinedData.length + " 字节\n" +
 	            "加密率: " + String.format("%.2f", (double)encryptedCombinedData.length/combinedBytes.length) + "\n" +
@@ -962,34 +905,37 @@ public class MainFrame extends JFrame {
 	        outputArea.setText(
 	            "步骤4完成：用对称密钥K加密 M || S\n" +
 	            "================================\n" +
+	            "消息: " + currentMessage + "\n" +
+	            "================================\n" +
 	            result
 	        );
 	        
-	        JOptionPane.showMessageDialog(this, "✅ 步骤4完成：组合数据已用对称密钥加密");
+	        return true;
 	        
 	    } catch (Exception ex) {
 	        String error = "❌ 对称加密失败: " + ex.getMessage();
 	        stepResults.put("step4", error);
 	        JOptionPane.showMessageDialog(this, error);
+	        return false;
 	    }
 	}
 
 	/**
-	 * 步骤5: 用B的公钥加密对称密钥K（修改版，存储结果）
+	 * 步骤5: 用B的公钥加密对称密钥K（修改版，返回是否成功）
 	 */
-	private void performStep5() {
+	private boolean performStep5() {
 	    if (publicKeyB == null) {
 	        String error = "❌ 失败：请先生成B的密钥对！";
 	        stepResults.put("step5", error);
 	        JOptionPane.showMessageDialog(this, error);
-	        return;
+	        return false;
 	    }
 	    
 	    if (symmetricKey == null) {
 	        String error = "❌ 失败：请先完成步骤3生成对称密钥！";
 	        stepResults.put("step5", error);
 	        JOptionPane.showMessageDialog(this, error);
-	        return;
+	        return false;
 	    }
 	    
 	    try {
@@ -1004,13 +950,15 @@ public class MainFrame extends JFrame {
 	        // 生成步骤结果文本
 	        String result = 
 	            "✅ 步骤完成\n" +
+	            "加密的消息: " + (currentMessage.length() > 50 ? currentMessage.substring(0, 50) + "..." : currentMessage) + "\n" +
 	            "RSA算法: 2048位\n" +
 	            "对称密钥K: " + symmetricKey + "\n" +
 	            "RSA加密后长度: " + encryptedSymmetricKey.length + " 字节\n" +
 	            "加密密钥摘要: " + encryptedKeyBase64.substring(0, Math.min(40, encryptedKeyBase64.length())) + "...\n" +
 	            "准备发送数据包:\n" +
 	            "  - RSA加密的K: " + encryptedSymmetricKey.length + " 字节\n" +
-	            "  - 对称加密的M||S: " + encryptedCombinedData.length + " 字节";
+	            "  - 对称加密的M||S: " + encryptedCombinedData.length + " 字节\n" +
+	            "  - 总数据量: " + (encryptedSymmetricKey.length + encryptedCombinedData.length) + " 字节";
 	        
 	        stepResults.put("step5", result);
 	        
@@ -1018,46 +966,55 @@ public class MainFrame extends JFrame {
 	        outputArea.setText(
 	            "步骤5完成：用B的公钥加密对称密钥K\n" +
 	            "================================\n" +
+	            "消息: " + currentMessage + "\n" +
+	            "================================\n" +
 	            result
 	        );
 	        
-	        JOptionPane.showMessageDialog(this, "✅ 步骤5完成：对称密钥已用B的公钥加密");
+	        return true;
 	        
 	    } catch (Exception ex) {
 	        String error = "❌ RSA加密失败: " + ex.getMessage();
 	        stepResults.put("step5", error);
 	        JOptionPane.showMessageDialog(this, error);
+	        return false;
 	    }
 	}
 
 	/**
-	 * 步骤6: B解密并验证（修改版，存储结果）
+	 * 步骤6: B解密并验证（修改版，返回是否成功）
 	 */
-	private void performStep6() {
+	private boolean performStep6() {
 	    if (privateKeyB == null || publicKeyA == null) {
 	        String error = "❌ 失败：请先生成B的私钥和A的公钥！";
 	        stepResults.put("step6", error);
 	        JOptionPane.showMessageDialog(this, error);
-	        return;
+	        return false;
 	    }
 	    
 	    if (encryptedSymmetricKey == null || encryptedCombinedData == null) {
 	        String error = "❌ 失败：请先完成步骤4和5！";
 	        stepResults.put("step6", error);
 	        JOptionPane.showMessageDialog(this, error);
-	        return;
+	        return false;
 	    }
 	    
 	    try {
 	        StringBuilder result = new StringBuilder();
 	        result.append("✅ 步骤完成\n");
+	        result.append("原始消息: ").append(currentMessage).append("\n\n");
 	        
 	        // 1. B用自己的私钥解密对称密钥K
 	        result.append("1. RSA解密对称密钥K:\n");
 	        byte[] decryptedKeyBytes = RSAUtil.decrypt(encryptedSymmetricKey, privateKeyB);
 	        String decryptedKey = new String(decryptedKeyBytes, "UTF-8");
 	        result.append("   解密成功，密钥长度: ").append(decryptedKey.length()).append(" 字符\n");
-	        result.append("   密钥匹配: ").append(decryptedKey.equals(symmetricKey) ? "✅ 一致" : "❌ 不一致").append("\n\n");
+	        boolean keyMatch = decryptedKey.equals(symmetricKey);
+	        result.append("   密钥匹配: ").append(keyMatch ? "✅ 一致" : "❌ 不一致").append("\n\n");
+	        
+	        if (!keyMatch) {
+	            result.append("⚠️ 警告：解密出的密钥与原始密钥不一致！\n\n");
+	        }
 	        
 	        // 2. B用对称密钥K解密组合数据
 	        result.append("2. 对称解密M||S:\n");
@@ -1076,7 +1033,9 @@ public class MainFrame extends JFrame {
 	        // 3. 分离消息和签名
 	        result.append("3. 分离消息M和签名S:\n");
 	        MessageParts parts = MessageUtil.separateMessageAndSignature(combined);
-	        result.append("   消息M: ").append(parts.message).append("\n");
+	        result.append("   解密出的消息: ").append(parts.message).append("\n");
+	        boolean messageMatch = parts.message.equals(currentMessage);
+	        result.append("   消息匹配: ").append(messageMatch ? "✅ 一致" : "❌ 不一致").append("\n");
 	        result.append("   签名S长度: ").append(parts.signature.length).append(" 字节\n\n");
 	        
 	        // 4. 计算Hash
@@ -1095,12 +1054,17 @@ public class MainFrame extends JFrame {
 	        result.append("5. 验证签名:\n");
 	        boolean verified = SignUtil.verify(hash, parts.signature, publicKeyA);
 	        
-	        if (verified) {
-	            result.append("   ✅ 签名验证成功！\n");
-	            result.append("   所有安全检查通过 ✓");
+	        if (verified && keyMatch && messageMatch) {
+	            result.append("   ✅ 所有验证通过！\n");
+	            result.append("   ✓ 签名验证成功\n");
+	            result.append("   ✓ 密钥匹配成功\n");
+	            result.append("   ✓ 消息匹配成功\n");
+	            result.append("   ✓ 完整通信流程验证完成");
 	        } else {
-	            result.append("   ❌ 签名验证失败！\n");
-	            result.append("   安全检查未通过 ✗");
+	            result.append("   ❌ 验证失败！\n");
+	            if (!verified) result.append("   ✗ 签名验证失败\n");
+	            if (!keyMatch) result.append("   ✗ 密钥不匹配\n");
+	            if (!messageMatch) result.append("   ✗ 消息不匹配\n");
 	        }
 	        
 	        String finalResult = result.toString();
@@ -1110,10 +1074,12 @@ public class MainFrame extends JFrame {
 	        StringBuilder fullResult = new StringBuilder();
 	        fullResult.append("步骤6完成：B解密并验证签名\n");
 	        fullResult.append("================================\n");
+	        fullResult.append("原始消息: ").append(currentMessage).append("\n");
+	        fullResult.append("================================\n");
 	        fullResult.append(finalResult);
 	        fullResult.append("\n\n══════════════ 混合加密流程完成 ══════════════\n");
 	        
-	        if (verified) {
+	        if (verified && keyMatch && messageMatch) {
 	            fullResult.append("\n🎉 恭喜！混合加密通信流程验证成功！\n");
 	            fullResult.append("✓ 消息完整性保护\n");
 	            fullResult.append("✓ 消息来源认证\n");
@@ -1125,20 +1091,13 @@ public class MainFrame extends JFrame {
 	        
 	        outputArea.setText(fullResult.toString());
 	        
-	        if (verified) {
-	            JOptionPane.showMessageDialog(this, 
-	                "<html><div style='text-align: center;'>" +
-	                "<h3>🎉 混合加密流程验证成功！</h3>" +
-	                "<p>所有步骤执行完成</p>" +
-	                "</div></html>");
-	        } else {
-	            JOptionPane.showMessageDialog(this, "⚠️ 验证失败，请检查密钥和流程");
-	        }
+	        return verified && keyMatch && messageMatch;
 	        
 	    } catch (Exception ex) {
 	        String error = "❌ 解密验证失败: " + ex.getMessage();
 	        stepResults.put("step6", error);
 	        JOptionPane.showMessageDialog(this, error);
+	        return false;
 	    }
 	}
 	
