@@ -8,591 +8,1356 @@ import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.Base64;
+import java.util.Arrays;
 
 import crypto.hash.HashUtil;
 import crypto.symmetric.SymmetricCrypto;
 import crypto.rsa.RSAUtil;
 import crypto.sign.SignUtil;
 import utils.FileUtil;
+import utils.MessageUtil;
+import utils.MessageUtil.MessageParts;
+import java.awt.event.*;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainFrame extends JFrame {
-    
-    // 密钥对
-    private PrivateKey privateKeyA;
-    private PublicKey publicKeyA;
-    private PrivateKey privateKeyB;
-    private PublicKey publicKeyB;
-    
-    // 文本区域
-    private JTextArea inputArea;
-    private JTextArea outputArea;
-    private JTextArea signatureArea;
-    private JTextArea pubKeyAText;
-    private JTextArea privKeyAText;
-    private JTextArea pubKeyBText;
-    private JTextArea privKeyBText;
-    
-    // 组合框
-    private JComboBox<String> hashBox;
-    private JComboBox<String> symBox;
-    
-    // 输入框
-    private JTextField keyField;
-    
-    public MainFrame() {
-        setTitle("密码学课程大作业 - 加密/解密/签名/验证系统");
-        setSize(1100, 700);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null);
-        
-        // 创建主面板
-        JPanel mainPanel = new JPanel(new BorderLayout());
-        
-        // 顶部标题
-        JLabel title = new JLabel("密码学课程大作业 - 加密/解密/签名/验证系统", JLabel.CENTER);
-        title.setFont(new Font("宋体", Font.BOLD, 22));
-        title.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
-        mainPanel.add(title, BorderLayout.NORTH);
-        
-        // 创建选项卡
-        JTabbedPane tabbedPane = new JTabbedPane();
-        
-        // 选项卡1: 基础功能
-        tabbedPane.addTab("基础功能", createBasicPanel());
-        
-        // 选项卡2: 完整通信流程
-        tabbedPane.addTab("完整流程", createFlowPanel());
-        
-        // 选项卡3: 密钥管理
-        tabbedPane.addTab("密钥管理", createKeyPanel());
-        
-        mainPanel.add(tabbedPane, BorderLayout.CENTER);
-        
-        // 底部状态栏
-        JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        statusPanel.setBorder(BorderFactory.createEtchedBorder());
-        JLabel statusLabel = new JLabel("就绪");
-        statusLabel.setFont(new Font("宋体", Font.PLAIN, 12));
-        statusPanel.add(statusLabel);
-        mainPanel.add(statusPanel, BorderLayout.SOUTH);
-        
-        setContentPane(mainPanel);
-        setVisible(true);
-    }
-    
-    /**
-     * 创建基础功能面板
-     */
-    private JPanel createBasicPanel() {
-        JPanel panel = new JPanel(new GridLayout(1, 2, 10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        
-        // 左侧：输入输出区域
-        JPanel leftPanel = new JPanel(new BorderLayout(5, 5));
-        
-        // 输入区域
-        JPanel inputPanel = new JPanel(new BorderLayout());
-        inputArea = new JTextArea(8, 30);
-        inputArea.setLineWrap(true);
-        JScrollPane inputScroll = new JScrollPane(inputArea);
-        inputScroll.setBorder(BorderFactory.createTitledBorder("输入明文/文本"));
-        inputPanel.add(inputScroll, BorderLayout.CENTER);
-        
-        // 输出区域
-        JPanel outputPanel = new JPanel(new BorderLayout());
-        outputArea = new JTextArea(8, 30);
-        outputArea.setLineWrap(true);
-        outputArea.setEditable(false);
-        JScrollPane outputScroll = new JScrollPane(outputArea);
-        outputScroll.setBorder(BorderFactory.createTitledBorder("输出结果"));
-        outputPanel.add(outputScroll, BorderLayout.CENTER);
-        
-        // 签名区域
-        JPanel signaturePanel = new JPanel(new BorderLayout());
-        signatureArea = new JTextArea(4, 30);
-        signatureArea.setLineWrap(true);
-        JScrollPane signatureScroll = new JScrollPane(signatureArea);
-        signatureScroll.setBorder(BorderFactory.createTitledBorder("数字签名"));
-        signaturePanel.add(signatureScroll, BorderLayout.CENTER);
-        
-        leftPanel.add(inputPanel, BorderLayout.NORTH);
-        leftPanel.add(outputPanel, BorderLayout.CENTER);
-        leftPanel.add(signaturePanel, BorderLayout.SOUTH);
-        
-        // 右侧：功能按钮区域
-        JPanel rightPanel = new JPanel();
-        rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
-        rightPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));
-        
-        // 算法选择
-        JPanel algoPanel = new JPanel(new GridLayout(4, 2, 5, 5));
-        algoPanel.setBorder(BorderFactory.createTitledBorder("算法选择"));
-        
-        algoPanel.add(new JLabel("Hash算法:"));
-        hashBox = new JComboBox<>(new String[]{"SHA-256", "MD5"});
-        algoPanel.add(hashBox);
-        
-        algoPanel.add(new JLabel("对称加密:"));
-        symBox = new JComboBox<>(new String[]{"AES", "DES"});
-        algoPanel.add(symBox);
-        
-        algoPanel.add(new JLabel("对称密钥:"));
-        JPanel keyPanel = new JPanel(new BorderLayout());
-        keyField = new JTextField();
-        JButton genKeyBtn = new JButton("生成");
-        keyPanel.add(keyField, BorderLayout.CENTER);
-        keyPanel.add(genKeyBtn, BorderLayout.EAST);
-        algoPanel.add(keyPanel);
-        
-        rightPanel.add(algoPanel);
-        rightPanel.add(Box.createVerticalStrut(10));
-        
-        // 生成密钥对按钮
-        JPanel rsaKeyPanel = new JPanel(new GridLayout(2, 1, 5, 5));
-        rsaKeyPanel.setBorder(BorderFactory.createTitledBorder("RSA密钥对"));
-        
-        JButton genKeyABtn = new JButton("生成 A 的密钥对");
-        JButton genKeyBBtn = new JButton("生成 B 的密钥对");
-        
-        rsaKeyPanel.add(genKeyABtn);
-        rsaKeyPanel.add(genKeyBBtn);
-        
-        rightPanel.add(rsaKeyPanel);
-        rightPanel.add(Box.createVerticalStrut(10));
-        
-        // Hash功能
-        JPanel hashPanel = new JPanel(new GridLayout(1, 2, 5, 5));
-        hashPanel.setBorder(BorderFactory.createTitledBorder("Hash计算"));
-        
-        JButton hashBtn = new JButton("计算Hash");
-        JButton fileHashBtn = new JButton("文件Hash");
-        
-        hashPanel.add(hashBtn);
-        hashPanel.add(fileHashBtn);
-        
-        rightPanel.add(hashPanel);
-        rightPanel.add(Box.createVerticalStrut(10));
-        
-        // 对称加密功能
-        JPanel symPanel = new JPanel(new GridLayout(2, 2, 5, 5));
-        symPanel.setBorder(BorderFactory.createTitledBorder("对称加密"));
-        
-        JButton encBtn = new JButton("加密文本");
-        JButton decBtn = new JButton("解密文本");
-        JButton fileEncBtn = new JButton("加密文件");
-        JButton fileDecBtn = new JButton("解密文件");
-        
-        symPanel.add(encBtn);
-        symPanel.add(decBtn);
-        symPanel.add(fileEncBtn);
-        symPanel.add(fileDecBtn);
-        
-        rightPanel.add(symPanel);
-        rightPanel.add(Box.createVerticalStrut(10));
-        
-        // 数字签名功能
-        JPanel signPanel = new JPanel(new GridLayout(2, 2, 5, 5));
-        signPanel.setBorder(BorderFactory.createTitledBorder("数字签名"));
-        
-        JButton signBtn = new JButton("A签名");
-        JButton verifyBtn = new JButton("验证签名");
-        JButton fileSignBtn = new JButton("文件签名");
-        JButton fileVerifyBtn = new JButton("验证文件签名");
-        
-        signPanel.add(signBtn);
-        signPanel.add(verifyBtn);
-        signPanel.add(fileSignBtn);
-        signPanel.add(fileVerifyBtn);
-        
-        rightPanel.add(signPanel);
-        
-        // 添加事件监听器
-        setupBasicEventListeners(genKeyBtn, genKeyABtn, genKeyBBtn, hashBtn, 
-                                fileHashBtn, encBtn, decBtn, fileEncBtn, 
-                                fileDecBtn, signBtn, verifyBtn, fileSignBtn, fileVerifyBtn);
-        
-        panel.add(leftPanel);
-        panel.add(rightPanel);
-        
-        return panel;
-    }
-    
-    /**
-     * 创建完整流程面板
-     */
-    private JPanel createFlowPanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        
-        // 流程图说明
-        JTextArea flowDesc = new JTextArea(
-            "完整通信流程说明：\n" +
-            "1. A用自己的私钥对消息签名\n" +
-            "2. B用A的公钥验证签名，确认消息来自A\n" +
-            "3. A用B的公钥加密消息\n" +
-            "4. B用自己的私钥解密消息\n" +
-            "\n这样可以实现：身份认证 + 保密传输"
-        );
-        flowDesc.setEditable(false);
-        flowDesc.setFont(new Font("宋体", Font.PLAIN, 14));
-        flowDesc.setBackground(new Color(240, 240, 240));
-        flowDesc.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        
-        panel.add(flowDesc);
-        panel.add(Box.createVerticalStrut(20));
-        
-        // 流程步骤面板
-        JPanel stepsPanel = new JPanel(new GridLayout(6, 1, 10, 10));
-        
-        // 步骤1: A签名
-        JPanel step1Panel = new JPanel(new BorderLayout());
-        JButton step1Btn = new JButton("步骤1: A对消息签名");
-        step1Btn.setBackground(new Color(200, 230, 255));
-        JTextArea step1Result = new JTextArea(2, 40);
-        step1Result.setEditable(false);
-        step1Result.setBorder(BorderFactory.createTitledBorder("签名结果"));
-        
-        step1Btn.addActionListener(e -> {
-            if (privateKeyA == null) {
-                JOptionPane.showMessageDialog(this, "请先生成A的密钥对！");
-                return;
-            }
-            String message = inputArea.getText();
-            if (message.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "请输入消息！");
-                return;
-            }
-            
-            // A用私钥签名
-            String hash = HashUtil.sha256(message);
-            byte[] signature = SignUtil.sign(hash, privateKeyA);
-            String signatureHex = bytesToHex(signature);
-            
-            step1Result.setText("签名（Hex）: " + signatureHex.substring(0, Math.min(100, signatureHex.length())) + "...");
-            signatureArea.setText(signatureHex);
-            outputArea.setText("✓ A已用私钥对消息完成签名");
-        });
-        
-        step1Panel.add(step1Btn, BorderLayout.NORTH);
-        step1Panel.add(new JScrollPane(step1Result), BorderLayout.CENTER);
-        
-        // 步骤2: B验证签名
-        JPanel step2Panel = new JPanel(new BorderLayout());
-        JButton step2Btn = new JButton("步骤2: B验证A的签名");
-        step2Btn.setBackground(new Color(200, 255, 230));
-        JTextArea step2Result = new JTextArea(2, 40);
-        step2Result.setEditable(false);
-        step2Result.setBorder(BorderFactory.createTitledBorder("验证结果"));
-        
-        step2Btn.addActionListener(e -> {
-            if (publicKeyA == null) {
-                JOptionPane.showMessageDialog(this, "请先生成A的密钥对！");
-                return;
-            }
-            
-            String message = inputArea.getText();
-            String signatureHex = signatureArea.getText();
-            if (message.isEmpty() || signatureHex.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "请先完成步骤1的签名！");
-                return;
-            }
-            
-            // B用A的公钥验证
-            String hash = HashUtil.sha256(message);
-            boolean verified = SignUtil.verify(hash, hexToBytes(signatureHex), publicKeyA);
-            
-            step2Result.setText(verified ? 
-                "✓ 签名验证成功！消息确实来自A" : 
-                "✗ 签名验证失败！消息可能被篡改");
-            outputArea.setText(step2Result.getText());
-        });
-        
-        step2Panel.add(step2Btn, BorderLayout.NORTH);
-        step2Panel.add(new JScrollPane(step2Result), BorderLayout.CENTER);
-        
-        // 步骤3: A用B的公钥加密
-        JPanel step3Panel = new JPanel(new BorderLayout());
-        JButton step3Btn = new JButton("步骤3: A用B的公钥加密");
-        step3Btn.setBackground(new Color(255, 240, 200));
-        JTextArea step3Result = new JTextArea(2, 40);
-        step3Result.setEditable(false);
-        step3Result.setBorder(BorderFactory.createTitledBorder("加密结果"));
-        
-        step3Btn.addActionListener(e -> {
-            if (publicKeyB == null) {
-                JOptionPane.showMessageDialog(this, "请先生成B的密钥对！");
-                return;
-            }
-            
-            String message = inputArea.getText();
-            if (message.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "请输入消息！");
-                return;
-            }
-            
-            // A用B的公钥加密
-            byte[] encrypted = RSAUtil.encrypt(message.getBytes(), publicKeyB);
-            String encryptedBase64 = Base64.getEncoder().encodeToString(encrypted);
-            
-            step3Result.setText("加密（Base64）: " + 
-                encryptedBase64.substring(0, Math.min(100, encryptedBase64.length())) + "...");
-            outputArea.setText("加密结果:\n" + encryptedBase64);
-        });
-        
-        step3Panel.add(step3Btn, BorderLayout.NORTH);
-        step3Panel.add(new JScrollPane(step3Result), BorderLayout.CENTER);
-        
-        // 步骤4: B用自己的私钥解密
-        JPanel step4Panel = new JPanel(new BorderLayout());
-        JButton step4Btn = new JButton("步骤4: B用自己的私钥解密");
-        step4Btn.setBackground(new Color(255, 200, 230));
-        JTextArea step4Result = new JTextArea(2, 40);
-        step4Result.setEditable(false);
-        step4Result.setBorder(BorderFactory.createTitledBorder("解密结果"));
-        
-        step4Btn.addActionListener(e -> {
-            if (privateKeyB == null) {
-                JOptionPane.showMessageDialog(this, "请先生成B的密钥对！");
-                return;
-            }
-            
-            String encryptedText = outputArea.getText();
-            if (!encryptedText.contains("加密结果")) {
-                JOptionPane.showMessageDialog(this, "请先完成步骤3的加密！");
-                return;
-            }
-            
-            // 提取Base64加密数据
-            String[] lines = encryptedText.split("\n");
-            if (lines.length < 2) {
-                JOptionPane.showMessageDialog(this, "加密数据格式错误！");
-                return;
-            }
-            
-            try {
-                byte[] encrypted = Base64.getDecoder().decode(lines[1]);
-                byte[] decrypted = RSAUtil.decrypt(encrypted, privateKeyB);
-                
-                step4Result.setText("解密结果: " + new String(decrypted));
-                outputArea.setText("B解密后的消息:\n" + new String(decrypted));
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "解密失败: " + ex.getMessage());
-            }
-        });
-        
-        step4Panel.add(step4Btn, BorderLayout.NORTH);
-        step4Panel.add(new JScrollPane(step4Result), BorderLayout.CENTER);
-        
-        // 一键完成所有步骤
-        JPanel autoPanel = new JPanel(new BorderLayout());
-        JButton autoBtn = new JButton("一键完成所有步骤");
-        autoBtn.setBackground(new Color(220, 200, 255));
-        autoBtn.setFont(new Font("宋体", Font.BOLD, 14));
-        
-        autoBtn.addActionListener(e -> {
-            // 检查所有密钥
-            if (privateKeyA == null || publicKeyA == null || 
-                privateKeyB == null || publicKeyB == null) {
-                JOptionPane.showMessageDialog(this, "请先生成A和B的完整密钥对！");
-                return;
-            }
-            
-            String message = inputArea.getText();
-            if (message.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "请输入消息！");
-                return;
-            }
-            
-            // 执行所有步骤
-            try {
-                // 步骤1: A签名
-                String hash = HashUtil.sha256(message);
-                byte[] signature = SignUtil.sign(hash, privateKeyA);
-                signatureArea.setText(bytesToHex(signature));
-                
-                // 步骤2: 验证签名
-                boolean verified = SignUtil.verify(hash, signature, publicKeyA);
-                
-                // 步骤3: A用B的公钥加密
-                byte[] encrypted = RSAUtil.encrypt(message.getBytes(), publicKeyB);
-                String encryptedBase64 = Base64.getEncoder().encodeToString(encrypted);
-                
-                // 步骤4: B用自己的私钥解密
-                byte[] decrypted = RSAUtil.decrypt(encrypted, privateKeyB);
-                
-                // 显示结果
-                outputArea.setText(
-                    "✓ 步骤1: A签名完成\n" +
-                    (verified ? "✓ 步骤2: 签名验证成功\n" : "✗ 步骤2: 签名验证失败\n") +
-                    "✓ 步骤3: 消息已加密\n" +
-                    "✓ 步骤4: B解密结果: " + new String(decrypted)
-                );
-                
-                JOptionPane.showMessageDialog(this, "所有步骤执行完成！");
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "执行失败: " + ex.getMessage());
-            }
-        });
-        
-        autoPanel.add(autoBtn, BorderLayout.CENTER);
-        
-        // 添加到步骤面板
-        stepsPanel.add(step1Panel);
-        stepsPanel.add(step2Panel);
-        stepsPanel.add(step3Panel);
-        stepsPanel.add(step4Panel);
-        stepsPanel.add(new JSeparator());
-        stepsPanel.add(autoPanel);
-        
-        panel.add(stepsPanel);
-        
-        return panel;
-    }
-    
-    /**
-     * 创建密钥管理面板
-     */
-    private JPanel createKeyPanel() {
-        JPanel panel = new JPanel(new GridLayout(2, 1, 10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        
-        // A的密钥区域
-        JPanel keyAPanel = new JPanel(new BorderLayout());
-        keyAPanel.setBorder(BorderFactory.createTitledBorder("A的密钥对"));
-        
-        JPanel keyAControls = new JPanel(new FlowLayout());
-        JButton genKeyABtn = new JButton("生成新密钥");
-        JButton saveKeyABtn = new JButton("保存密钥");
-        JButton loadKeyABtn = new JButton("加载密钥");
-        
-        keyAControls.add(genKeyABtn);
-        keyAControls.add(saveKeyABtn);
-        keyAControls.add(loadKeyABtn);
-        
-        JPanel keyADisplay = new JPanel(new GridLayout(2, 1, 5, 5));
-        pubKeyAText = new JTextArea(3, 50);
-        pubKeyAText.setEditable(false);
-        pubKeyAText.setBorder(BorderFactory.createTitledBorder("A的公钥"));
-        
-        privKeyAText = new JTextArea(3, 50);
-        privKeyAText.setEditable(false);
-        privKeyAText.setBorder(BorderFactory.createTitledBorder("A的私钥（保密！）"));
-        
-        keyADisplay.add(new JScrollPane(pubKeyAText));
-        keyADisplay.add(new JScrollPane(privKeyAText));
-        
-        keyAPanel.add(keyAControls, BorderLayout.NORTH);
-        keyAPanel.add(keyADisplay, BorderLayout.CENTER);
-        
-        // B的密钥区域
-        JPanel keyBPanel = new JPanel(new BorderLayout());
-        keyBPanel.setBorder(BorderFactory.createTitledBorder("B的密钥对"));
-        
-        JPanel keyBControls = new JPanel(new FlowLayout());
-        JButton genKeyBBtn = new JButton("生成新密钥");
-        JButton saveKeyBBtn = new JButton("保存密钥");
-        JButton loadKeyBBtn = new JButton("加载密钥");
-        
-        keyBControls.add(genKeyBBtn);
-        keyBControls.add(saveKeyBBtn);
-        keyBControls.add(loadKeyBBtn);
-        
-        JPanel keyBDisplay = new JPanel(new GridLayout(2, 1, 5, 5));
-        pubKeyBText = new JTextArea(3, 50);
-        pubKeyBText.setEditable(false);
-        pubKeyBText.setBorder(BorderFactory.createTitledBorder("B的公钥"));
-        
-        privKeyBText = new JTextArea(3, 50);
-        privKeyBText.setEditable(false);
-        privKeyBText.setBorder(BorderFactory.createTitledBorder("B的私钥（保密！）"));
-        
-        keyBDisplay.add(new JScrollPane(pubKeyBText));
-        keyBDisplay.add(new JScrollPane(privKeyBText));
-        
-        keyBPanel.add(keyBControls, BorderLayout.NORTH);
-        keyBPanel.add(keyBDisplay, BorderLayout.CENTER);
-        
-        // 添加事件监听器
-        setupKeyEventListeners(genKeyABtn, saveKeyABtn, loadKeyABtn, 
-                              genKeyBBtn, saveKeyBBtn, loadKeyBBtn);
-        
-        panel.add(keyAPanel);
-        panel.add(keyBPanel);
-        
-        return panel;
-    }
-    
-    /**
-     * 设置基础功能事件监听器
-     */
-    private void setupBasicEventListeners(JButton genKeyBtn, JButton genKeyABtn, JButton genKeyBBtn,
-                                         JButton hashBtn, JButton fileHashBtn, JButton encBtn,
-                                         JButton decBtn, JButton fileEncBtn, JButton fileDecBtn,
-                                         JButton signBtn, JButton verifyBtn, JButton fileSignBtn,
-                                         JButton fileVerifyBtn) {
-        
-        // 生成对称密钥
-        genKeyBtn.addActionListener(e -> {
-            String type = (String) symBox.getSelectedItem();
-            String key = null;
-            if ("AES".equals(type)) {
-                key = SymmetricCrypto.generateAESKey();
-            } else {
-                key = SymmetricCrypto.generateDESKey();
-            }
-            keyField.setText(key);
-        });
-        
-        // 生成A的密钥对
-        genKeyABtn.addActionListener(e -> {
-            KeyPair kp = RSAUtil.generateKeyPair(2048);
-            privateKeyA = kp.getPrivate();
-            publicKeyA = kp.getPublic();
-            
-            // 更新显示
-            pubKeyAText.setText("公钥（Base64）:\n" + 
-                Base64.getEncoder().encodeToString(publicKeyA.getEncoded()));
-            privKeyAText.setText("私钥（Base64）:\n" + 
-                Base64.getEncoder().encodeToString(privateKeyA.getEncoded()));
-            
-            JOptionPane.showMessageDialog(this, "A的密钥对生成成功！");
-        });
-        
-        // 生成B的密钥对
-        genKeyBBtn.addActionListener(e -> {
-            KeyPair kp = RSAUtil.generateKeyPair(2048);
-            privateKeyB = kp.getPrivate();
-            publicKeyB = kp.getPublic();
-            
-            // 更新显示
-            pubKeyBText.setText("公钥（Base64）:\n" + 
-                Base64.getEncoder().encodeToString(publicKeyB.getEncoded()));
-            privKeyBText.setText("私钥（Base64）:\n" + 
-                Base64.getEncoder().encodeToString(privateKeyB.getEncoded()));
-            
-            JOptionPane.showMessageDialog(this, "B的密钥对生成成功！");
-        });
-        
-        // Hash计算
-        hashBtn.addActionListener(e -> {
-            String text = inputArea.getText();
-            if (text.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "请输入文本！");
-                return;
-            }
-            
-            String algo = (String) hashBox.getSelectedItem();
-            String hash;
-            if ("MD5".equals(algo)) {
-                hash = HashUtil.md5(text);
-            } else {
-                hash = HashUtil.sha256(text);
-            }
-            outputArea.setText(hash);
-        });
-        
-        // 文件Hash
+
+	// 密钥对
+	private PrivateKey privateKeyA;
+	private PublicKey publicKeyA;
+	private PrivateKey privateKeyB;
+	private PublicKey publicKeyB;
+
+	// 文本区域
+	private JTextArea inputArea;
+	private JTextArea outputArea;
+	private JTextArea signatureArea;
+	private JTextArea pubKeyAText;
+	private JTextArea privKeyAText;
+	private JTextArea pubKeyBText;
+	private JTextArea privKeyBText;
+	private JTextArea diagramArea;
+
+	// 组合框
+	private JComboBox<String> hashBox;
+	private JComboBox<String> symBox;
+
+	// 输入框
+	private JTextField keyField;
+
+	// 临时存储变量（用于流程演示）
+	private byte[] currentSignature;
+	private String currentCombinedMessage;
+	private byte[] encryptedCombinedData; // 对称加密的密文
+	private byte[] encryptedSymmetricKey; // RSA加密的对称密钥
+	private String symmetricKey; // 对称密钥K
+
+	// 添加成员变量存储步骤结果
+	private Map<String, String> stepResults = new HashMap<>();
+
+	public MainFrame() {
+		setTitle("密码学课程大作业 - 混合加密系统");
+		setSize(1200, 800);
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setLocationRelativeTo(null);
+
+		// 创建主面板
+		JPanel mainPanel = new JPanel(new BorderLayout());
+
+		// 顶部标题
+		JLabel title = new JLabel("密码学课程大作业 - 混合加密系统（对称+非对称）", JLabel.CENTER);
+		title.setFont(new Font("宋体", Font.BOLD, 22));
+		title.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+		mainPanel.add(title, BorderLayout.NORTH);
+
+		// 创建选项卡
+		JTabbedPane tabbedPane = new JTabbedPane();
+
+		// 选项卡1: 基础功能
+		tabbedPane.addTab("基础功能", createBasicPanel());
+
+		// 选项卡2: 完整混合加密流程
+		tabbedPane.addTab("混合加密流程", createHybridFlowPanel());
+
+		// 选项卡3: 密钥管理
+		tabbedPane.addTab("密钥管理", createKeyPanel());
+
+		// 选项卡4: 流程图解
+		tabbedPane.addTab("流程图解", createDiagramPanel());
+
+		mainPanel.add(tabbedPane, BorderLayout.CENTER);
+
+		// 底部状态栏
+		JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		statusPanel.setBorder(BorderFactory.createEtchedBorder());
+		JLabel statusLabel = new JLabel("就绪 - 使用混合加密：对称加密M||S，RSA加密对称密钥");
+		statusLabel.setFont(new Font("宋体", Font.PLAIN, 12));
+		statusPanel.add(statusLabel);
+		mainPanel.add(statusPanel, BorderLayout.SOUTH);
+
+		setContentPane(mainPanel);
+		setVisible(true);
+	}
+
+	/**
+	 * 创建基础功能面板
+	 */
+	private JPanel createBasicPanel() {
+		// 保持不变...
+		return createBasicPanelContent();
+	}
+
+	private JPanel createBasicPanelContent() {
+		JPanel panel = new JPanel(new GridLayout(1, 2, 10, 10));
+		panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+		// 左侧：输入输出区域
+		JPanel leftPanel = new JPanel(new BorderLayout(5, 5));
+
+		// 输入区域
+		JPanel inputPanel = new JPanel(new BorderLayout());
+		inputArea = new JTextArea(8, 35);
+		inputArea.setLineWrap(true);
+		JScrollPane inputScroll = new JScrollPane(inputArea);
+		inputScroll.setBorder(BorderFactory.createTitledBorder("输入明文/文本"));
+		inputPanel.add(inputScroll, BorderLayout.CENTER);
+
+		// 输出区域
+		JPanel outputPanel = new JPanel(new BorderLayout());
+		outputArea = new JTextArea(8, 35);
+		outputArea.setLineWrap(true);
+		outputArea.setEditable(false);
+		JScrollPane outputScroll = new JScrollPane(outputArea);
+		outputScroll.setBorder(BorderFactory.createTitledBorder("输出结果"));
+		outputPanel.add(outputScroll, BorderLayout.CENTER);
+
+		// 签名区域
+		JPanel signaturePanel = new JPanel(new BorderLayout());
+		signatureArea = new JTextArea(4, 35);
+		signatureArea.setLineWrap(true);
+		JScrollPane signatureScroll = new JScrollPane(signatureArea);
+		signatureScroll.setBorder(BorderFactory.createTitledBorder("数字签名（Base64格式）"));
+		signaturePanel.add(signatureScroll, BorderLayout.CENTER);
+
+		leftPanel.add(inputPanel, BorderLayout.NORTH);
+		leftPanel.add(outputPanel, BorderLayout.CENTER);
+		leftPanel.add(signaturePanel, BorderLayout.SOUTH);
+
+		// 右侧：功能按钮区域
+		JPanel rightPanel = new JPanel();
+		rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
+		rightPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));
+
+		// 算法选择
+		JPanel algoPanel = new JPanel(new GridLayout(4, 2, 5, 5));
+		algoPanel.setBorder(BorderFactory.createTitledBorder("算法选择"));
+
+		algoPanel.add(new JLabel("Hash算法:"));
+		hashBox = new JComboBox<>(new String[] { "SHA-256", "MD5" });
+		algoPanel.add(hashBox);
+
+		algoPanel.add(new JLabel("对称加密:"));
+		symBox = new JComboBox<>(new String[] { "AES", "DES" });
+		algoPanel.add(symBox);
+
+		algoPanel.add(new JLabel("对称密钥:"));
+		JPanel keyPanel = new JPanel(new BorderLayout());
+		keyField = new JTextField();
+		JButton genKeyBtn = new JButton("生成");
+		keyPanel.add(keyField, BorderLayout.CENTER);
+		keyPanel.add(genKeyBtn, BorderLayout.EAST);
+		algoPanel.add(keyPanel);
+
+		rightPanel.add(algoPanel);
+		rightPanel.add(Box.createVerticalStrut(10));
+
+		// 生成密钥对按钮
+		JPanel rsaKeyPanel = new JPanel(new GridLayout(2, 1, 5, 5));
+		rsaKeyPanel.setBorder(BorderFactory.createTitledBorder("RSA密钥对"));
+
+		JButton genKeyABtn = new JButton("生成 A 的密钥对");
+		JButton genKeyBBtn = new JButton("生成 B 的密钥对");
+
+		rsaKeyPanel.add(genKeyABtn);
+		rsaKeyPanel.add(genKeyBBtn);
+
+		rightPanel.add(rsaKeyPanel);
+		rightPanel.add(Box.createVerticalStrut(10));
+
+		// Hash功能
+		JPanel hashPanel = new JPanel(new GridLayout(1, 2, 5, 5));
+		hashPanel.setBorder(BorderFactory.createTitledBorder("Hash计算"));
+
+		JButton hashBtn = new JButton("计算Hash");
+		JButton fileHashBtn = new JButton("文件Hash");
+
+		hashPanel.add(hashBtn);
+		hashPanel.add(fileHashBtn);
+
+		rightPanel.add(hashPanel);
+		rightPanel.add(Box.createVerticalStrut(10));
+
+		// 对称加密功能
+		JPanel symPanel = new JPanel(new GridLayout(2, 2, 5, 5));
+		symPanel.setBorder(BorderFactory.createTitledBorder("对称加密"));
+
+		JButton encBtn = new JButton("加密文本");
+		JButton decBtn = new JButton("解密文本");
+		JButton fileEncBtn = new JButton("加密文件");
+		JButton fileDecBtn = new JButton("解密文件");
+
+		symPanel.add(encBtn);
+		symPanel.add(decBtn);
+		symPanel.add(fileEncBtn);
+		symPanel.add(fileDecBtn);
+
+		rightPanel.add(symPanel);
+		rightPanel.add(Box.createVerticalStrut(10));
+
+		// 数字签名功能（基础版）
+		JPanel signPanel = new JPanel(new GridLayout(2, 2, 5, 5));
+		signPanel.setBorder(BorderFactory.createTitledBorder("数字签名"));
+
+		JButton signBtn = new JButton("A签名");
+		JButton verifyBtn = new JButton("验证签名");
+		JButton fileSignBtn = new JButton("文件签名");
+		JButton fileVerifyBtn = new JButton("验证文件签名");
+
+		signPanel.add(signBtn);
+		signPanel.add(verifyBtn);
+		signPanel.add(fileSignBtn);
+		signPanel.add(fileVerifyBtn);
+
+		rightPanel.add(signPanel);
+
+		// 添加事件监听器
+		setupBasicEventListeners(genKeyBtn, genKeyABtn, genKeyBBtn, hashBtn, fileHashBtn, encBtn, decBtn, fileEncBtn,
+				fileDecBtn, signBtn, verifyBtn, fileSignBtn, fileVerifyBtn);
+
+		panel.add(leftPanel);
+		panel.add(rightPanel);
+
+		return panel;
+	}
+
+	/**
+	 * 创建混合加密流程面板
+	 */
+	/*
+	 * private JPanel createHybridFlowPanel() { JPanel panel = new JPanel();
+	 * panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+	 * panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+	 * 
+	 * // 流程图说明 JTextArea flowDesc = new JTextArea(
+	 * "══════════════════ 混合加密通信流程 ══════════════════\n\n" +
+	 * "完整流程（对称加密 + RSA加密）：\n\n" + "发送方A的操作流程：\n" + "1. 计算消息的Hash值：h = H(M)\n" +
+	 * "2. 用私钥RKa对Hash值签名：S = Sig(RKa, h)\n" + "3. 组合明文和签名：M || S\n" +
+	 * "4. 生成对称密钥 K\n" + "5. 用K加密组合数据：C1 = E(K, M || S)\n" +
+	 * "6. 用B的公钥UKb加密K：C2 = E(UKb, K)\n" + "7. 发送：C2 || C1 给B\n\n" + "接收方B的操作流程：\n"
+	 * + "1. 用私钥RKb解密出K：K = D(RKb, C2)\n" + "2. 用K解密组合数据：M || S = D(K, C1)\n" +
+	 * "3. 分离出明文M和签名S\n" + "4. 计算Hash值：h' = H(M)\n" +
+	 * "5. 用A的公钥UKa验证签名：Ver(UKa, h', S)\n\n" + "注：|| 表示组合操作，K是对称密钥（AES/DES）");
+	 * flowDesc.setEditable(false); flowDesc.setFont(new Font("等线", Font.PLAIN,
+	 * 14)); flowDesc.setBackground(new Color(240, 245, 255));
+	 * flowDesc.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+	 * 
+	 * panel.add(new JScrollPane(flowDesc)); panel.add(Box.createVerticalStrut(15));
+	 * 
+	 * // 流程步骤面板 JPanel stepsPanel = new JPanel(new GridLayout(7, 1, 10, 15));
+	 * stepsPanel.setBorder(BorderFactory.createTitledBorder("分步执行"));
+	 * 
+	 * // 步骤1: A计算Hash并签名 JPanel step1Panel = createStepPanel("步骤1: A计算Hash并用私钥签名",
+	 * new Color(200, 230, 255), e -> performStep1());
+	 * 
+	 * // 步骤2: A组合 M || S JPanel step2Panel =
+	 * createStepPanel("步骤2: A组合明文和签名（M || S）", new Color(180, 220, 255), e ->
+	 * performStep2());
+	 * 
+	 * // 步骤3: 生成对称密钥K JPanel step3Panel = createStepPanel("步骤3: 生成对称密钥 K", new
+	 * Color(160, 210, 255), e -> performStep3());
+	 * 
+	 * // 步骤4: 用K加密 M || S JPanel step4Panel = createStepPanel("步骤4: 用对称密钥K加密组合数据",
+	 * new Color(140, 200, 255), e -> performStep4());
+	 * 
+	 * // 步骤5: 用B的公钥加密K JPanel step5Panel = createStepPanel("步骤5: 用B的公钥加密对称密钥K", new
+	 * Color(120, 190, 255), e -> performStep5());
+	 * 
+	 * // 步骤6: B解密并验证 JPanel step6Panel = createStepPanel("步骤6: B解密密钥和数据，验证签名", new
+	 * Color(100, 180, 255), e -> performStep6());
+	 * 
+	 * // 一键完成 JPanel autoPanel = new JPanel(new BorderLayout()); JButton autoBtn =
+	 * new JButton("⚡ 一键完成所有步骤"); autoBtn.setBackground(new Color(255, 220, 100));
+	 * autoBtn.setFont(new Font("宋体", Font.BOLD, 16));
+	 * autoBtn.setForeground(Color.BLACK);
+	 * 
+	 * autoBtn.addActionListener(e -> { try { performStep1(); Thread.sleep(200);
+	 * performStep2(); Thread.sleep(200); performStep3(); Thread.sleep(200);
+	 * performStep4(); Thread.sleep(200); performStep5(); Thread.sleep(200);
+	 * performStep6(); JOptionPane.showMessageDialog(this, "✅ 所有步骤执行完成！"); } catch
+	 * (Exception ex) { JOptionPane.showMessageDialog(this, "❌ 执行失败: " +
+	 * ex.getMessage()); } });
+	 * 
+	 * autoPanel.add(autoBtn, BorderLayout.CENTER);
+	 * 
+	 * // 添加到步骤面板 stepsPanel.add(step1Panel); stepsPanel.add(step2Panel);
+	 * stepsPanel.add(step3Panel); stepsPanel.add(step4Panel);
+	 * stepsPanel.add(step5Panel); stepsPanel.add(step6Panel);
+	 * 
+	 * panel.add(stepsPanel); panel.add(Box.createVerticalStrut(15));
+	 * panel.add(autoPanel);
+	 * 
+	 * return panel; }
+	 */
+	
+	/**
+	 * 修改 createHybridFlowPanel 方法中的步骤面板创建
+	 */
+	private JPanel createHybridFlowPanel() {
+	    JPanel panel = new JPanel();
+	    panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+	    panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+	    
+	    // 流程图说明（保持不变）
+	    JTextArea flowDesc = new JTextArea(
+	        "══════════════════ 混合加密通信流程 ══════════════════\n\n" +
+	        "完整流程（对称加密 + RSA加密）：\n\n" +
+	        "发送方A的操作流程：\n" +
+	        "1. 计算消息的Hash值：h = H(M)\n" +
+	        "2. 用私钥RKa对Hash值签名：S = Sig(RKa, h)\n" +
+	        "3. 组合明文和签名：M || S\n" +
+	        "4. 生成对称密钥 K\n" +
+	        "5. 用K加密组合数据：C1 = E(K, M || S)\n" +
+	        "6. 用B的公钥UKb加密K：C2 = E(UKb, K)\n" +
+	        "7. 发送：C2 || C1 给B\n\n" +
+	        "接收方B的操作流程：\n" +
+	        "1. 用私钥RKb解密出K：K = D(RKb, C2)\n" +
+	        "2. 用K解密组合数据：M || S = D(K, C1)\n" +
+	        "3. 分离出明文M和签名S\n" +
+	        "4. 计算Hash值：h' = H(M)\n" +
+	        "5. 用A的公钥UKa验证签名：Ver(UKa, h', S)\n\n" +
+	        "注：|| 表示组合操作，K是对称密钥（AES/DES）"
+	    );
+	    flowDesc.setEditable(false);
+	    flowDesc.setFont(new Font("等线", Font.PLAIN, 14));
+	    flowDesc.setBackground(new Color(240, 245, 255));
+	    flowDesc.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+	    
+	    panel.add(new JScrollPane(flowDesc));
+	    panel.add(Box.createVerticalStrut(15));
+	    
+	    // 流程步骤面板 - 修改这里，传递stepId
+	    JPanel stepsPanel = new JPanel(new GridLayout(7, 1, 10, 15));
+	    stepsPanel.setBorder(BorderFactory.createTitledBorder("分步执行（点击按钮执行，结果在下方显示）"));
+	    
+	    // 步骤1: A计算Hash并签名
+	    JPanel step1Panel = createStepPanel(
+	        "步骤1: A计算Hash并用私钥签名",
+	        new Color(200, 230, 255),
+	        e -> performStep1(),
+	        "step1"
+	    );
+	    
+	    // 步骤2: A组合 M || S
+	    JPanel step2Panel = createStepPanel(
+	        "步骤2: A组合明文和签名（M || S）",
+	        new Color(180, 220, 255),
+	        e -> performStep2(),
+	        "step2"
+	    );
+	    
+	    // 步骤3: 生成对称密钥K
+	    JPanel step3Panel = createStepPanel(
+	        "步骤3: 生成对称密钥 K",
+	        new Color(160, 210, 255),
+	        e -> performStep3(),
+	        "step3"
+	    );
+	    
+	    // 步骤4: 用K加密 M || S
+	    JPanel step4Panel = createStepPanel(
+	        "步骤4: 用对称密钥K加密组合数据",
+	        new Color(140, 200, 255),
+	        e -> performStep4(),
+	        "step4"
+	    );
+	    
+	    // 步骤5: 用B的公钥加密K
+	    JPanel step5Panel = createStepPanel(
+	        "步骤5: 用B的公钥加密对称密钥K",
+	        new Color(120, 190, 255),
+	        e -> performStep5(),
+	        "step5"
+	    );
+	    
+	    // 步骤6: B解密并验证
+	    JPanel step6Panel = createStepPanel(
+	        "步骤6: B解密密钥和数据，验证签名",
+	        new Color(100, 180, 255),
+	        e -> performStep6(),
+	        "step6"
+	    );
+	    
+	    // 一键完成
+	    JPanel autoPanel = new JPanel(new BorderLayout());
+	    JButton autoBtn = new JButton("⚡ 一键完成所有步骤");
+	    autoBtn.setBackground(new Color(255, 220, 100));
+	    autoBtn.setFont(new Font("宋体", Font.BOLD, 16));
+	    autoBtn.setForeground(Color.BLACK);
+	    
+	    autoBtn.addActionListener(e -> {
+	        try {
+	            // 清空所有步骤结果
+	            stepResults.clear();
+	            
+	            // 执行所有步骤
+	            performStep1();
+	            updateStepResultDisplay("step1", step1Panel);
+	            
+	            Thread.sleep(500);
+	            performStep2();
+	            updateStepResultDisplay("step2", step2Panel);
+	            
+	            Thread.sleep(500);
+	            performStep3();
+	            updateStepResultDisplay("step3", step3Panel);
+	            
+	            Thread.sleep(500);
+	            performStep4();
+	            updateStepResultDisplay("step4", step4Panel);
+	            
+	            Thread.sleep(500);
+	            performStep5();
+	            updateStepResultDisplay("step5", step5Panel);
+	            
+	            Thread.sleep(500);
+	            performStep6();
+	            updateStepResultDisplay("step6", step6Panel);
+	            
+	            JOptionPane.showMessageDialog(this, "✅ 所有步骤执行完成！");
+	        } catch (Exception ex) {
+	            JOptionPane.showMessageDialog(this, "❌ 执行失败: " + ex.getMessage());
+	        }
+	    });
+	    
+	    autoPanel.add(autoBtn, BorderLayout.CENTER);
+	    
+	    // 添加到步骤面板
+	    stepsPanel.add(step1Panel);
+	    stepsPanel.add(step2Panel);
+	    stepsPanel.add(step3Panel);
+	    stepsPanel.add(step4Panel);
+	    stepsPanel.add(step5Panel);
+	    stepsPanel.add(step6Panel);
+	    
+	    panel.add(stepsPanel);
+	    panel.add(Box.createVerticalStrut(15));
+	    panel.add(autoPanel);
+	    
+	    return panel;
+	}
+	
+	/**
+	 * 更新步骤结果显示
+	 */
+	private void updateStepResultDisplay(String stepId, JPanel stepPanel) {
+	    SwingUtilities.invokeLater(() -> {
+	        String result = stepResults.get(stepId);
+	        if (result != null && !result.isEmpty()) {
+	            // 查找面板中的结果区域
+	            for (Component comp : stepPanel.getComponents()) {
+	                if (comp instanceof JScrollPane) {
+	                    JScrollPane scrollPane = (JScrollPane) comp;
+	                    Component view = scrollPane.getViewport().getView();
+	                    if (view instanceof JTextArea) {
+	                        ((JTextArea) view).setText(result);
+	                        break;
+	                    }
+	                }
+	            }
+	        }
+	    });
+	}
+
+	/**
+	 * 创建步骤面板
+	 */
+	/*
+	 * private JPanel createStepPanel(String title, Color color, ActionListener
+	 * action) { JPanel panel = new JPanel(new BorderLayout(5, 5));
+	 * panel.setBorder(BorderFactory.createCompoundBorder(
+	 * BorderFactory.createLineBorder(color, 2), BorderFactory.createEmptyBorder(5,
+	 * 5, 5, 5) ));
+	 * 
+	 * JButton button = new JButton(title); button.setBackground(color);
+	 * button.setFont(new Font("宋体", Font.BOLD, 14));
+	 * button.addActionListener(action);
+	 * 
+	 * JTextArea resultArea = new JTextArea(3, 50); resultArea.setEditable(false);
+	 * resultArea.setFont(new Font("等线", Font.PLAIN, 12));
+	 * resultArea.setBorder(BorderFactory.createTitledBorder("执行结果"));
+	 * 
+	 * panel.add(button, BorderLayout.NORTH); panel.add(new JScrollPane(resultArea),
+	 * BorderLayout.CENTER);
+	 * 
+	 * return panel; }
+	 */
+
+	/**
+	 * 创建步骤面板（修改版，能显示结果）
+	 */
+	private JPanel createStepPanel(String title, Color color, ActionListener action, String stepId) {
+		JPanel panel = new JPanel(new BorderLayout(5, 5));
+		panel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(color, 2),
+				BorderFactory.createEmptyBorder(5, 5, 5, 5)));
+
+		JButton button = new JButton(title);
+		button.setBackground(color);
+		button.setFont(new Font("宋体", Font.BOLD, 14));
+
+		// 为按钮添加自定义属性
+		button.putClientProperty("stepId", stepId);
+
+		// 修改ActionListener，将结果存储并显示
+		button.addActionListener(e -> {
+			// 执行步骤
+			action.actionPerformed(e);
+
+			// 延迟一下，确保步骤执行完成
+			SwingUtilities.invokeLater(() -> {
+				// 获取结果文本
+				String result = getStepResult(stepId);
+				if (result != null && !result.isEmpty()) {
+					// 显示在当前面板的结果区域
+					JTextArea resultArea = findResultAreaInPanel(panel);
+					if (resultArea != null) {
+						resultArea.setText(result);
+					}
+
+					// 同时在主输出区域也显示（可选）
+					outputArea.append("\n\n" + title + " 结果:\n" + result);
+					outputArea.setCaretPosition(outputArea.getDocument().getLength());
+				}
+			});
+		});
+
+		// 结果区域
+		JTextArea resultArea = new JTextArea(3, 50);
+		resultArea.setEditable(false);
+		resultArea.setFont(new Font("等线", Font.PLAIN, 11));
+		resultArea.setBorder(BorderFactory.createTitledBorder("执行结果"));
+		resultArea.setLineWrap(true);
+		resultArea.setWrapStyleWord(true);
+
+		// 存储结果区域引用
+		panel.putClientProperty("resultArea", resultArea);
+
+		panel.add(button, BorderLayout.NORTH);
+		panel.add(new JScrollPane(resultArea), BorderLayout.CENTER);
+
+		return panel;
+	}
+
+	/**
+	 * 在面板中查找结果区域
+	 */
+	private JTextArea findResultAreaInPanel(JPanel panel) {
+		for (Component comp : panel.getComponents()) {
+			if (comp instanceof JScrollPane) {
+				JScrollPane scrollPane = (JScrollPane) comp;
+				Component view = scrollPane.getViewport().getView();
+				if (view instanceof JTextArea) {
+					return (JTextArea) view;
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * 获取步骤执行结果
+	 */
+	private String getStepResult(String stepId) {
+		// 这里根据步骤ID返回相应的结果
+		// 可以修改每个步骤函数，将结果存储到成员变量中
+		return stepResults.getOrDefault(stepId, "");
+	}
+
+	/*    *//**
+			 * 步骤1: A计算Hash并用私钥签名
+			 */
+	/*
+	 * private void performStep1() { if (privateKeyA == null) {
+	 * JOptionPane.showMessageDialog(this, "请先生成A的密钥对！"); return; }
+	 * 
+	 * String message = inputArea.getText(); if (message.isEmpty()) {
+	 * JOptionPane.showMessageDialog(this, "请输入消息！"); return; }
+	 * 
+	 * try { // 计算Hash String algo = (String) hashBox.getSelectedItem(); String
+	 * hash; if ("MD5".equals(algo)) { hash = HashUtil.md5(message); } else { hash =
+	 * HashUtil.sha256(message); }
+	 * 
+	 * // 用A的私钥签名 currentSignature = SignUtil.sign(hash, privateKeyA);
+	 * 
+	 * // 显示结果 String sigBase64 =
+	 * Base64.getEncoder().encodeToString(currentSignature);
+	 * signatureArea.setText(sigBase64);
+	 * 
+	 * outputArea.setText( "步骤1完成：\n" + "消息: " + message + "\n" + "Hash值（" + algo +
+	 * "）: " + hash + "\n" + "签名（Base64）: " + sigBase64.substring(0, Math.min(50,
+	 * sigBase64.length())) + "..." );
+	 * 
+	 * JOptionPane.showMessageDialog(this, "✅ 步骤1完成：A已对消息完成签名");
+	 * 
+	 * } catch (Exception ex) { JOptionPane.showMessageDialog(this, "❌ 签名失败: " +
+	 * ex.getMessage()); } }
+	 * 
+	 *//**
+		 * 步骤2: A组合明文和签名（M || S）
+		 */
+	/*
+	 * private void performStep2() { String message = inputArea.getText(); if
+	 * (message.isEmpty() || currentSignature == null) {
+	 * JOptionPane.showMessageDialog(this, "请先完成步骤1！"); return; }
+	 * 
+	 * try { // 使用正确的组合方式 currentCombinedMessage =
+	 * MessageUtil.combineMessageAndSignature(message, currentSignature);
+	 * 
+	 * // 显示组合结果 outputArea.setText( "步骤2完成：明文与签名组合（M || S）\n" + "原始消息: " + message
+	 * + "\n" + "组合格式: [长度]|消息|SIG|签名\n" + "组合结果长度: " +
+	 * currentCombinedMessage.getBytes("UTF-8").length + " 字节" );
+	 * 
+	 * JOptionPane.showMessageDialog(this, "✅ 步骤2完成：已组合 M || S");
+	 * 
+	 * } catch (Exception ex) { JOptionPane.showMessageDialog(this, "❌ 组合失败: " +
+	 * ex.getMessage()); } }
+	 * 
+	 *//**
+		 * 步骤3: 生成对称密钥K
+		 */
+	/*
+	 * private void performStep3() { try { // 根据选择的对称算法生成密钥 String algo = (String)
+	 * symBox.getSelectedItem(); if ("AES".equals(algo)) { symmetricKey =
+	 * SymmetricCrypto.generateAESKey(); } else { symmetricKey =
+	 * SymmetricCrypto.generateDESKey(); }
+	 * 
+	 * // 显示生成的对称密钥 outputArea.setText( "步骤3完成：生成对称密钥 K\n" + "对称算法: " + algo + "\n"
+	 * + "密钥: " + symmetricKey + "\n" + "密钥长度: " + symmetricKey.length() + " 字符" );
+	 * 
+	 * // 更新密钥输入框 keyField.setText(symmetricKey);
+	 * 
+	 * JOptionPane.showMessageDialog(this, "✅ 步骤3完成：已生成对称密钥 K");
+	 * 
+	 * } catch (Exception ex) { JOptionPane.showMessageDialog(this, "❌ 生成密钥失败: " +
+	 * ex.getMessage()); } }
+	 * 
+	 *//**
+		 * 步骤4: 用对称密钥K加密组合数据
+		 */
+	/*
+	 * private void performStep4() { if (currentCombinedMessage == null ||
+	 * symmetricKey == null) { JOptionPane.showMessageDialog(this, "请先完成步骤2和3！");
+	 * return; }
+	 * 
+	 * try { // 获取对称算法 String algo = (String) symBox.getSelectedItem();
+	 * 
+	 * // 用对称密钥K加密组合数据 byte[] combinedBytes =
+	 * currentCombinedMessage.getBytes("UTF-8");
+	 * 
+	 * if ("AES".equals(algo)) { encryptedCombinedData =
+	 * SymmetricCrypto.encryptAES(combinedBytes, symmetricKey); } else {
+	 * encryptedCombinedData = SymmetricCrypto.encryptDES(combinedBytes,
+	 * symmetricKey); }
+	 * 
+	 * // 显示加密结果 outputArea.setText( "步骤4完成：用对称密钥K加密 M || S\n" + "加密算法: " + algo +
+	 * "\n" + "原始数据长度: " + combinedBytes.length + " 字节\n" + "加密后长度: " +
+	 * encryptedCombinedData.length + " 字节\n" + "密文（Base64）: " +
+	 * Base64.getEncoder().encodeToString(encryptedCombinedData).substring(0,
+	 * Math.min(80,
+	 * Base64.getEncoder().encodeToString(encryptedCombinedData).length())) + "..."
+	 * );
+	 * 
+	 * JOptionPane.showMessageDialog(this, "✅ 步骤4完成：组合数据已用对称密钥加密");
+	 * 
+	 * } catch (Exception ex) { JOptionPane.showMessageDialog(this, "❌ 对称加密失败: " +
+	 * ex.getMessage()); } }
+	 * 
+	 *//**
+		 * 步骤5: 用B的公钥加密对称密钥K
+		 */
+	/*
+	 * private void performStep5() { if (publicKeyB == null) {
+	 * JOptionPane.showMessageDialog(this, "请先生成B的密钥对！"); return; }
+	 * 
+	 * if (symmetricKey == null) { JOptionPane.showMessageDialog(this,
+	 * "请先完成步骤3生成对称密钥！"); return; }
+	 * 
+	 * try { // 用B的公钥加密对称密钥K encryptedSymmetricKey = RSAUtil.encrypt(
+	 * symmetricKey.getBytes("UTF-8"), publicKeyB );
+	 * 
+	 * String encryptedKeyBase64 =
+	 * Base64.getEncoder().encodeToString(encryptedSymmetricKey);
+	 * 
+	 * // 显示加密结果 outputArea.setText( "步骤5完成：用B的公钥加密对称密钥K\n" + "RSA算法: 2048位\n" +
+	 * "对称密钥K: " + symmetricKey + "\n" + "加密后的密钥（Base64）: " +
+	 * encryptedKeyBase64.substring(0, Math.min(80, encryptedKeyBase64.length())) +
+	 * "...\n\n" + "═════════════ 发送给B的数据 ═════════════\n" + "1. RSA加密的对称密钥: " +
+	 * encryptedKeyBase64.substring(0, Math.min(50, encryptedKeyBase64.length())) +
+	 * "...\n" + "2. 对称加密的M||S: " +
+	 * Base64.getEncoder().encodeToString(encryptedCombinedData).substring(0,
+	 * Math.min(50,
+	 * Base64.getEncoder().encodeToString(encryptedCombinedData).length())) + "..."
+	 * );
+	 * 
+	 * JOptionPane.showMessageDialog(this, "✅ 步骤5完成：对称密钥已用B的公钥加密");
+	 * 
+	 * } catch (Exception ex) { JOptionPane.showMessageDialog(this, "❌ RSA加密失败: " +
+	 * ex.getMessage()); } }
+	 * 
+	 *//**
+		 * 步骤6: B解密并验证
+		 *//*
+			 * private void performStep6() { if (privateKeyB == null || publicKeyA == null)
+			 * { JOptionPane.showMessageDialog(this, "请先生成B的私钥和A的公钥！"); return; }
+			 * 
+			 * if (encryptedSymmetricKey == null || encryptedCombinedData == null) {
+			 * JOptionPane.showMessageDialog(this, "请先完成步骤4和5！"); return; }
+			 * 
+			 * try { StringBuilder result = new StringBuilder();
+			 * result.append("步骤6：B接收并处理数据\n");
+			 * result.append("════════════════════════════════════════════\n\n");
+			 * 
+			 * // 1. B用自己的私钥解密对称密钥K result.append("1. 用私钥RKb解密对称密钥K:\n"); byte[]
+			 * decryptedKeyBytes = RSAUtil.decrypt(encryptedSymmetricKey, privateKeyB);
+			 * String decryptedKey = new String(decryptedKeyBytes, "UTF-8");
+			 * result.append("   解密出的对称密钥: ").append(decryptedKey).append("\n\n");
+			 * 
+			 * // 2. B用对称密钥K解密组合数据 result.append("2. 用对称密钥K解密M||S:\n"); String algo =
+			 * (String) symBox.getSelectedItem(); byte[] decryptedCombined;
+			 * 
+			 * if ("AES".equals(algo)) { decryptedCombined =
+			 * SymmetricCrypto.decryptAES(encryptedCombinedData, decryptedKey); } else {
+			 * decryptedCombined = SymmetricCrypto.decryptDES(encryptedCombinedData,
+			 * decryptedKey); }
+			 * 
+			 * String combined = new String(decryptedCombined, "UTF-8");
+			 * result.append("   解密出的组合数据长度: ").append(combined.length()).append(" 字符\n\n");
+			 * 
+			 * // 3. 分离消息和签名 result.append("3. 分离消息M和签名S:\n"); MessageParts parts =
+			 * MessageUtil.separateMessageAndSignature(combined);
+			 * result.append("   消息M: ").append(parts.message).append("\n");
+			 * result.append("   签名S长度: ").append(parts.signature.length).append(" 字节\n\n");
+			 * 
+			 * // 4. 计算Hash result.append("4. 计算消息Hash:\n"); String hashAlgo = (String)
+			 * hashBox.getSelectedItem(); String hash; if ("MD5".equals(hashAlgo)) { hash =
+			 * HashUtil.md5(parts.message); } else { hash = HashUtil.sha256(parts.message);
+			 * } result.append("   Hash值（" + hashAlgo + "）: ").append(hash).append("\n\n");
+			 * 
+			 * // 5. 用A的公钥验证签名 result.append("5. 用A的公钥验证签名:\n"); boolean verified =
+			 * SignUtil.verify(hash, parts.signature, publicKeyA);
+			 * 
+			 * if (verified) { result.append("   ✅ 签名验证成功！\n");
+			 * result.append("   ✓ 消息确实来自A\n"); result.append("   ✓ 消息在传输中未被篡改\n");
+			 * result.append("   ✓ 完整性和真实性得到保证\n"); result.append("   ✓ 对称密钥安全传输\n"); } else
+			 * { result.append("   ❌ 签名验证失败！\n"); result.append("   ✗ 消息可能被篡改\n");
+			 * result.append("   ✗ 或签名者不是A\n"); result.append("   ✗ 或密钥不匹配\n"); }
+			 * 
+			 * result.append("\n══════════════ 流程验证完成 ══════════════\n");
+			 * 
+			 * outputArea.setText(result.toString());
+			 * 
+			 * if (verified) { JOptionPane.showMessageDialog(this,
+			 * "<html><div style='text-align: center;'>" + "<h3>🎉 混合加密流程验证成功！</h3>" +
+			 * "<p>完整流程：</p>" + "<p>1. A签名 → 2. M||S组合 → 3. 生成K</p>" +
+			 * "<p>4. K加密 → 5. RSA加密K → 6. B解密验证</p>" + "</div></html>"); } else {
+			 * JOptionPane.showMessageDialog(this, "⚠️ 验证失败，请检查密钥和流程"); }
+			 * 
+			 * } catch (Exception ex) { ex.printStackTrace();
+			 * JOptionPane.showMessageDialog(this, "❌ 解密验证失败: " + ex.getMessage()); } }
+			 */
+
+	/**
+	 * 步骤1: A计算Hash并用私钥签名（修改版，存储结果）
+	 */
+	private void performStep1() {
+	    if (privateKeyA == null) {
+	        JOptionPane.showMessageDialog(this, "请先生成A的密钥对！");
+	        stepResults.put("step1", "❌ 失败：未生成A的密钥对");
+	        return;
+	    }
+	    
+	    String message = inputArea.getText();
+	    if (message.isEmpty()) {
+	        JOptionPane.showMessageDialog(this, "请输入消息！");
+	        stepResults.put("step1", "❌ 失败：未输入消息");
+	        return;
+	    }
+	    
+	    try {
+	        // 计算Hash
+	        String algo = (String) hashBox.getSelectedItem();
+	        String hash;
+	        if ("MD5".equals(algo)) {
+	            hash = HashUtil.md5(message);
+	        } else {
+	            hash = HashUtil.sha256(message);
+	        }
+	        
+	        // 用A的私钥签名
+	        currentSignature = SignUtil.sign(hash, privateKeyA);
+	        
+	        // 显示结果
+	        String sigBase64 = Base64.getEncoder().encodeToString(currentSignature);
+	        signatureArea.setText(sigBase64);
+	        
+	        // 生成步骤结果文本
+	        String result = 
+	            "✅ 步骤完成\n" +
+	            "消息: " + message + "\n" +
+	            "Hash算法: " + algo + "\n" +
+	            "Hash值: " + hash.substring(0, Math.min(20, hash.length())) + "...\n" +
+	            "签名长度: " + currentSignature.length + " 字节\n" +
+	            "签名摘要: " + sigBase64.substring(0, Math.min(30, sigBase64.length())) + "...";
+	        
+	        stepResults.put("step1", result);
+	        
+	        // 在主输出区域也显示
+	        outputArea.setText(
+	            "步骤1完成：A对消息完成签名\n" +
+	            "================================\n" +
+	            result
+	        );
+	        
+	        JOptionPane.showMessageDialog(this, "✅ 步骤1完成：A已对消息完成签名");
+	        
+	    } catch (Exception ex) {
+	        String error = "❌ 签名失败: " + ex.getMessage();
+	        stepResults.put("step1", error);
+	        JOptionPane.showMessageDialog(this, error);
+	    }
+	}
+
+	/**
+	 * 步骤2: A组合明文和签名（M || S）（修改版，存储结果）
+	 */
+	private void performStep2() {
+	    String message = inputArea.getText();
+	    if (message.isEmpty() || currentSignature == null) {
+	        String error = "❌ 失败：请先完成步骤1！";
+	        stepResults.put("step2", error);
+	        JOptionPane.showMessageDialog(this, error);
+	        return;
+	    }
+	    
+	    try {
+	        // 使用正确的组合方式
+	        currentCombinedMessage = MessageUtil.combineMessageAndSignature(message, currentSignature);
+	        
+	        // 生成步骤结果文本
+	        String result = 
+	            "✅ 步骤完成\n" +
+	            "消息长度: " + message.length() + " 字符\n" +
+	            "签名长度: " + currentSignature.length + " 字节\n" +
+	            "组合格式: [长度]|消息|SIG|签名\n" +
+	            "组合后长度: " + currentCombinedMessage.length() + " 字符\n" +
+	            "组合数据示例: " + currentCombinedMessage.substring(0, Math.min(50, currentCombinedMessage.length())) + "...";
+	        
+	        stepResults.put("step2", result);
+	        
+	        // 在主输出区域也显示
+	        outputArea.setText(
+	            "步骤2完成：明文与签名组合（M || S）\n" +
+	            "================================\n" +
+	            result
+	        );
+	        
+	        JOptionPane.showMessageDialog(this, "✅ 步骤2完成：已组合 M || S");
+	        
+	    } catch (Exception ex) {
+	        String error = "❌ 组合失败: " + ex.getMessage();
+	        stepResults.put("step2", error);
+	        JOptionPane.showMessageDialog(this, error);
+	    }
+	}
+
+	/**
+	 * 步骤3: 生成对称密钥K（修改版，存储结果）
+	 */
+	private void performStep3() {
+	    try {
+	        // 根据选择的对称算法生成密钥
+	        String algo = (String) symBox.getSelectedItem();
+	        if ("AES".equals(algo)) {
+	            symmetricKey = SymmetricCrypto.generateAESKey();
+	        } else {
+	            symmetricKey = SymmetricCrypto.generateDESKey();
+	        }
+	        
+	        // 生成步骤结果文本
+	        String result = 
+	            "✅ 步骤完成\n" +
+	            "对称算法: " + algo + "\n" +
+	            "密钥: " + symmetricKey + "\n" +
+	            "密钥长度: " + symmetricKey.length() + " 字符\n" +
+	            "密钥类型: " + (algo.equals("AES") ? "AES-256位" : "DES-56位");
+	        
+	        stepResults.put("step3", result);
+	        
+	        // 更新密钥输入框
+	        keyField.setText(symmetricKey);
+	        
+	        // 在主输出区域也显示
+	        outputArea.setText(
+	            "步骤3完成：生成对称密钥 K\n" +
+	            "================================\n" +
+	            result
+	        );
+	        
+	        JOptionPane.showMessageDialog(this, "✅ 步骤3完成：已生成对称密钥 K");
+	        
+	    } catch (Exception ex) {
+	        String error = "❌ 生成密钥失败: " + ex.getMessage();
+	        stepResults.put("step3", error);
+	        JOptionPane.showMessageDialog(this, error);
+	    }
+	}
+
+	/**
+	 * 步骤4: 用对称密钥K加密组合数据（修改版，存储结果）
+	 */
+	private void performStep4() {
+	    if (currentCombinedMessage == null || symmetricKey == null) {
+	        String error = "❌ 失败：请先完成步骤2和3！";
+	        stepResults.put("step4", error);
+	        JOptionPane.showMessageDialog(this, error);
+	        return;
+	    }
+	    
+	    try {
+	        // 获取对称算法
+	        String algo = (String) symBox.getSelectedItem();
+	        
+	        // 用对称密钥K加密组合数据
+	        byte[] combinedBytes = currentCombinedMessage.getBytes("UTF-8");
+	        
+	        if ("AES".equals(algo)) {
+	            encryptedCombinedData = SymmetricCrypto.encryptAES(combinedBytes, symmetricKey);
+	        } else {
+	            encryptedCombinedData = SymmetricCrypto.encryptDES(combinedBytes, symmetricKey);
+	        }
+	        
+	        // 生成步骤结果文本
+	        String result = 
+	            "✅ 步骤完成\n" +
+	            "加密算法: " + algo + "\n" +
+	            "原始数据长度: " + combinedBytes.length + " 字节\n" +
+	            "加密后长度: " + encryptedCombinedData.length + " 字节\n" +
+	            "加密率: " + String.format("%.2f", (double)encryptedCombinedData.length/combinedBytes.length) + "\n" +
+	            "密文摘要: " + 
+	            Base64.getEncoder().encodeToString(encryptedCombinedData).substring(0, Math.min(40, Base64.getEncoder().encodeToString(encryptedCombinedData).length())) + "...";
+	        
+	        stepResults.put("step4", result);
+	        
+	        // 在主输出区域也显示
+	        outputArea.setText(
+	            "步骤4完成：用对称密钥K加密 M || S\n" +
+	            "================================\n" +
+	            result
+	        );
+	        
+	        JOptionPane.showMessageDialog(this, "✅ 步骤4完成：组合数据已用对称密钥加密");
+	        
+	    } catch (Exception ex) {
+	        String error = "❌ 对称加密失败: " + ex.getMessage();
+	        stepResults.put("step4", error);
+	        JOptionPane.showMessageDialog(this, error);
+	    }
+	}
+
+	/**
+	 * 步骤5: 用B的公钥加密对称密钥K（修改版，存储结果）
+	 */
+	private void performStep5() {
+	    if (publicKeyB == null) {
+	        String error = "❌ 失败：请先生成B的密钥对！";
+	        stepResults.put("step5", error);
+	        JOptionPane.showMessageDialog(this, error);
+	        return;
+	    }
+	    
+	    if (symmetricKey == null) {
+	        String error = "❌ 失败：请先完成步骤3生成对称密钥！";
+	        stepResults.put("step5", error);
+	        JOptionPane.showMessageDialog(this, error);
+	        return;
+	    }
+	    
+	    try {
+	        // 用B的公钥加密对称密钥K
+	        encryptedSymmetricKey = RSAUtil.encrypt(
+	            symmetricKey.getBytes("UTF-8"), 
+	            publicKeyB
+	        );
+	        
+	        String encryptedKeyBase64 = Base64.getEncoder().encodeToString(encryptedSymmetricKey);
+	        
+	        // 生成步骤结果文本
+	        String result = 
+	            "✅ 步骤完成\n" +
+	            "RSA算法: 2048位\n" +
+	            "对称密钥K: " + symmetricKey + "\n" +
+	            "RSA加密后长度: " + encryptedSymmetricKey.length + " 字节\n" +
+	            "加密密钥摘要: " + encryptedKeyBase64.substring(0, Math.min(40, encryptedKeyBase64.length())) + "...\n" +
+	            "准备发送数据包:\n" +
+	            "  - RSA加密的K: " + encryptedSymmetricKey.length + " 字节\n" +
+	            "  - 对称加密的M||S: " + encryptedCombinedData.length + " 字节";
+	        
+	        stepResults.put("step5", result);
+	        
+	        // 在主输出区域也显示
+	        outputArea.setText(
+	            "步骤5完成：用B的公钥加密对称密钥K\n" +
+	            "================================\n" +
+	            result
+	        );
+	        
+	        JOptionPane.showMessageDialog(this, "✅ 步骤5完成：对称密钥已用B的公钥加密");
+	        
+	    } catch (Exception ex) {
+	        String error = "❌ RSA加密失败: " + ex.getMessage();
+	        stepResults.put("step5", error);
+	        JOptionPane.showMessageDialog(this, error);
+	    }
+	}
+
+	/**
+	 * 步骤6: B解密并验证（修改版，存储结果）
+	 */
+	private void performStep6() {
+	    if (privateKeyB == null || publicKeyA == null) {
+	        String error = "❌ 失败：请先生成B的私钥和A的公钥！";
+	        stepResults.put("step6", error);
+	        JOptionPane.showMessageDialog(this, error);
+	        return;
+	    }
+	    
+	    if (encryptedSymmetricKey == null || encryptedCombinedData == null) {
+	        String error = "❌ 失败：请先完成步骤4和5！";
+	        stepResults.put("step6", error);
+	        JOptionPane.showMessageDialog(this, error);
+	        return;
+	    }
+	    
+	    try {
+	        StringBuilder result = new StringBuilder();
+	        result.append("✅ 步骤完成\n");
+	        
+	        // 1. B用自己的私钥解密对称密钥K
+	        result.append("1. RSA解密对称密钥K:\n");
+	        byte[] decryptedKeyBytes = RSAUtil.decrypt(encryptedSymmetricKey, privateKeyB);
+	        String decryptedKey = new String(decryptedKeyBytes, "UTF-8");
+	        result.append("   解密成功，密钥长度: ").append(decryptedKey.length()).append(" 字符\n");
+	        result.append("   密钥匹配: ").append(decryptedKey.equals(symmetricKey) ? "✅ 一致" : "❌ 不一致").append("\n\n");
+	        
+	        // 2. B用对称密钥K解密组合数据
+	        result.append("2. 对称解密M||S:\n");
+	        String algo = (String) symBox.getSelectedItem();
+	        byte[] decryptedCombined;
+	        
+	        if ("AES".equals(algo)) {
+	            decryptedCombined = SymmetricCrypto.decryptAES(encryptedCombinedData, decryptedKey);
+	        } else {
+	            decryptedCombined = SymmetricCrypto.decryptDES(encryptedCombinedData, decryptedKey);
+	        }
+	        
+	        String combined = new String(decryptedCombined, "UTF-8");
+	        result.append("   解密成功，数据长度: ").append(combined.length()).append(" 字符\n\n");
+	        
+	        // 3. 分离消息和签名
+	        result.append("3. 分离消息M和签名S:\n");
+	        MessageParts parts = MessageUtil.separateMessageAndSignature(combined);
+	        result.append("   消息M: ").append(parts.message).append("\n");
+	        result.append("   签名S长度: ").append(parts.signature.length).append(" 字节\n\n");
+	        
+	        // 4. 计算Hash
+	        result.append("4. 计算消息Hash:\n");
+	        String hashAlgo = (String) hashBox.getSelectedItem();
+	        String hash;
+	        if ("MD5".equals(hashAlgo)) {
+	            hash = HashUtil.md5(parts.message);
+	        } else {
+	            hash = HashUtil.sha256(parts.message);
+	        }
+	        result.append("   Hash算法: ").append(hashAlgo).append("\n");
+	        result.append("   Hash值: ").append(hash.substring(0, Math.min(20, hash.length()))).append("...\n\n");
+	        
+	        // 5. 用A的公钥验证签名
+	        result.append("5. 验证签名:\n");
+	        boolean verified = SignUtil.verify(hash, parts.signature, publicKeyA);
+	        
+	        if (verified) {
+	            result.append("   ✅ 签名验证成功！\n");
+	            result.append("   所有安全检查通过 ✓");
+	        } else {
+	            result.append("   ❌ 签名验证失败！\n");
+	            result.append("   安全检查未通过 ✗");
+	        }
+	        
+	        String finalResult = result.toString();
+	        stepResults.put("step6", finalResult);
+	        
+	        // 在主输出区域显示完整结果
+	        StringBuilder fullResult = new StringBuilder();
+	        fullResult.append("步骤6完成：B解密并验证签名\n");
+	        fullResult.append("================================\n");
+	        fullResult.append(finalResult);
+	        fullResult.append("\n\n══════════════ 混合加密流程完成 ══════════════\n");
+	        
+	        if (verified) {
+	            fullResult.append("\n🎉 恭喜！混合加密通信流程验证成功！\n");
+	            fullResult.append("✓ 消息完整性保护\n");
+	            fullResult.append("✓ 消息来源认证\n");
+	            fullResult.append("✓ 数据机密性保护\n");
+	            fullResult.append("✓ 对称密钥安全传输\n");
+	        } else {
+	            fullResult.append("\n⚠️ 验证失败，请检查密钥和流程\n");
+	        }
+	        
+	        outputArea.setText(fullResult.toString());
+	        
+	        if (verified) {
+	            JOptionPane.showMessageDialog(this, 
+	                "<html><div style='text-align: center;'>" +
+	                "<h3>🎉 混合加密流程验证成功！</h3>" +
+	                "<p>所有步骤执行完成</p>" +
+	                "</div></html>");
+	        } else {
+	            JOptionPane.showMessageDialog(this, "⚠️ 验证失败，请检查密钥和流程");
+	        }
+	        
+	    } catch (Exception ex) {
+	        String error = "❌ 解密验证失败: " + ex.getMessage();
+	        stepResults.put("step6", error);
+	        JOptionPane.showMessageDialog(this, error);
+	    }
+	}
+	
+	/**
+	 * 创建密钥管理面板（保持不变）
+	 */
+	private JPanel createKeyPanel() {
+		// 保持原有密钥管理面板不变
+		JPanel panel = new JPanel(new GridLayout(2, 1, 10, 10));
+		panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+		// A的密钥区域
+		JPanel keyAPanel = new JPanel(new BorderLayout());
+		keyAPanel.setBorder(BorderFactory.createTitledBorder("A的密钥对（发送方）"));
+
+		JPanel keyAControls = new JPanel(new FlowLayout());
+		JButton genKeyABtn = new JButton("生成新密钥");
+		JButton saveKeyABtn = new JButton("保存私钥");
+		JButton loadKeyABtn = new JButton("加载私钥");
+		JButton showPubKeyABtn = new JButton("显示公钥");
+
+		keyAControls.add(genKeyABtn);
+		keyAControls.add(saveKeyABtn);
+		keyAControls.add(loadKeyABtn);
+		keyAControls.add(showPubKeyABtn);
+
+		JPanel keyADisplay = new JPanel(new GridLayout(2, 1, 5, 5));
+		pubKeyAText = new JTextArea(3, 60);
+		pubKeyAText.setEditable(false);
+		pubKeyAText.setBorder(BorderFactory.createTitledBorder("A的公钥（UKA）"));
+
+		privKeyAText = new JTextArea(3, 60);
+		privKeyAText.setEditable(false);
+		privKeyAText.setBorder(BorderFactory.createTitledBorder("A的私钥（RKa）- 保密！"));
+
+		keyADisplay.add(new JScrollPane(pubKeyAText));
+		keyADisplay.add(new JScrollPane(privKeyAText));
+
+		keyAPanel.add(keyAControls, BorderLayout.NORTH);
+		keyAPanel.add(keyADisplay, BorderLayout.CENTER);
+
+		// B的密钥区域
+		JPanel keyBPanel = new JPanel(new BorderLayout());
+		keyBPanel.setBorder(BorderFactory.createTitledBorder("B的密钥对（接收方）"));
+
+		JPanel keyBControls = new JPanel(new FlowLayout());
+		JButton genKeyBBtn = new JButton("生成新密钥");
+		JButton saveKeyBBtn = new JButton("保存私钥");
+		JButton loadKeyBBtn = new JButton("加载私钥");
+		JButton showPubKeyBBtn = new JButton("显示公钥");
+
+		keyBControls.add(genKeyBBtn);
+		keyBControls.add(saveKeyBBtn);
+		keyBControls.add(loadKeyBBtn);
+		keyBControls.add(showPubKeyBBtn);
+
+		JPanel keyBDisplay = new JPanel(new GridLayout(2, 1, 5, 5));
+		pubKeyBText = new JTextArea(3, 60);
+		pubKeyBText.setEditable(false);
+		pubKeyBText.setBorder(BorderFactory.createTitledBorder("B的公钥（UKB）"));
+
+		privKeyBText = new JTextArea(3, 60);
+		privKeyBText.setEditable(false);
+		privKeyBText.setBorder(BorderFactory.createTitledBorder("B的私钥（RKb）- 保密！"));
+
+		keyBDisplay.add(new JScrollPane(pubKeyBText));
+		keyBDisplay.add(new JScrollPane(privKeyBText));
+
+		keyBPanel.add(keyBControls, BorderLayout.NORTH);
+		keyBPanel.add(keyBDisplay, BorderLayout.CENTER);
+
+		// 添加事件监听器
+		setupKeyEventListeners(genKeyABtn, saveKeyABtn, loadKeyABtn, showPubKeyABtn, genKeyBBtn, saveKeyBBtn,
+				loadKeyBBtn, showPubKeyBBtn);
+
+		panel.add(keyAPanel);
+		panel.add(keyBPanel);
+
+		return panel;
+	}
+
+	/**
+	 * 创建流程图解面板（更新为混合加密）
+	 */
+	private JPanel createDiagramPanel() {
+		JPanel panel = new JPanel(new BorderLayout());
+
+		// 创建图示文本
+		String diagram = "╔══════════════════════════════════════════════════════════════════════╗\n"
+				+ "║                   混合加密系统 - 完整通信流程图解                    ║\n"
+				+ "╚══════════════════════════════════════════════════════════════════════╝\n\n"
+				+ "                         ┌─────────┐\n" + "                         │   明文M  │\n"
+				+ "                         └────┬────┘\n" + "                              │\n"
+				+ "                         ┌────▼────┐\n" + "                   步骤1 │  H(M)   │ 计算Hash\n"
+				+ "                         └────┬────┘\n" + "                              │\n"
+				+ "                         ┌────▼────┐\n" + "                   步骤2 │ Sig(RKa)│ A的私钥签名 → S\n"
+				+ "                         └────┬────┘\n" + "                              │\n"
+				+ "                    ┌─────────┴─────────┐\n" + "                    ▼                   ▼\n"
+				+ "               ┌─────────┐       ┌─────────┐\n" + "               │    M     │       │    S     │\n"
+				+ "               └────┬────┘       └────┬────┘\n" + "                    │                  │\n"
+				+ "                    └────────┬─────────┘\n" + "                   步骤3     │   组合 M || S\n"
+				+ "                         ┌───▼───┐\n" + "               ┌────────►│ 生成K  │ 生成对称密钥\n"
+				+ "               │         └───┬───┘\n" + "               │             │\n"
+				+ "         ┌─────▼─────┐ ┌────▼─────┐\n" + "   步骤5 │ E(UKb, K) │ │ E(K, M||S) │ 步骤4\n"
+				+ "         └─────┬─────┘ └────┬─────┘\n" + "               │             │\n"
+				+ "               └─────┬───────┘\n" + "                     │  发送：E(UKb, K) || E(K, M||S)\n"
+				+ "               ┌─────▼─────────────────────┐\n" + "               │            B接收            │\n"
+				+ "               └─────┬─────────────────────┘\n" + "               ┌─────▼─────┐ ┌────▼─────┐\n"
+				+ "         步骤6 │ D(RKb, K) │ │ D(K, M||S) │ 步骤7\n" + "               └─────┬─────┘ └────┬─────┘\n"
+				+ "                     │             │\n" + "               ┌─────▼────────────▼─────┐\n"
+				+ "               │     分离 M 和 S        │ 步骤8\n" + "               └─────┬────────────┬─────┘\n"
+				+ "                     │            │\n" + "               ┌─────▼────┐ ┌────▼────┐\n"
+				+ "               │    M     │ │    S     │\n" + "               └────┬────┘ └────┬────┘\n"
+				+ "                    │            │\n" + "               ┌────▼────┐      │\n"
+				+ "               │  H(M)   │      │\n" + "               └────┬────┘      │\n"
+				+ "                    │           │\n" + "               ┌────▼───────────▼────┐\n"
+				+ "         步骤9 │  Ver(UKa, H(M), S)  │ 验证签名\n" + "               └─────────┬───────────┘\n"
+				+ "                         │\n" + "               ┌─────────▼─────────────┐\n"
+				+ "               │     验证成功/失败      │\n" + "               └───────────────────────┘\n\n"
+				+ "════════════════════════════ 符号说明 ════════════════════════════\n"
+				+ "  M: 明文消息           K: 对称密钥（AES/DES）\n" + "  H: Hash函数           RKa: A的私钥        UKa: A的公钥\n"
+				+ "  S: 数字签名           RKb: B的私钥        UKb: B的公钥\n" + "  ||: 组合操作          E(): 加密算法       D(): 解密算法\n"
+				+ "  Sig(): 签名算法       Ver(): 验证算法\n"
+				+ "══════════════════════════════════════════════════════════════════\n";
+
+		diagramArea = new JTextArea(diagram);
+		diagramArea.setEditable(false);
+		diagramArea.setFont(new Font("等线", Font.PLAIN, 12));
+		diagramArea.setBackground(new Color(250, 250, 250));
+		diagramArea.setForeground(new Color(30, 30, 30));
+
+		// 添加说明
+		JPanel bottomPanel = new JPanel(new BorderLayout());
+		JTextArea noteArea = new JTextArea("📌 混合加密系统关键点：\n" + "1. 对称加密速度快，用于加密大量数据（M || S）\n"
+				+ "2. RSA加密安全，用于加密短小的对称密钥K\n" + "3. 发送数据：E(UKb, K) || E(K, M||S)\n" + "4. 接收方先用RSA解密出K，再用K解密M||S\n"
+				+ "5. 最后验证签名确认消息来源和完整性\n" + "6. 结合了对称加密的速度和非对称加密的安全性");
+		noteArea.setEditable(false);
+		noteArea.setFont(new Font("等线", Font.PLAIN, 12));
+		noteArea.setBackground(new Color(255, 255, 200));
+		noteArea.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+		panel.add(new JScrollPane(diagramArea), BorderLayout.CENTER);
+		panel.add(noteArea, BorderLayout.SOUTH);
+
+		return panel;
+	}
+
+	/**
+	 * 设置基础功能事件监听器（保持不变）
+	 */
+	private void setupBasicEventListeners(JButton genKeyBtn, JButton genKeyABtn, JButton genKeyBBtn, JButton hashBtn,
+			JButton fileHashBtn, JButton encBtn, JButton decBtn, JButton fileEncBtn, JButton fileDecBtn,
+			JButton signBtn, JButton verifyBtn, JButton fileSignBtn, JButton fileVerifyBtn) {
+
+		// 生成对称密钥（用于基础功能）
+		genKeyBtn.addActionListener(e -> {
+			String type = (String) symBox.getSelectedItem();
+			String key = null;
+			if ("AES".equals(type)) {
+				key = SymmetricCrypto.generateAESKey();
+			} else {
+				key = SymmetricCrypto.generateDESKey();
+			}
+			keyField.setText(key);
+		});
+
+		// 生成A的密钥对
+		genKeyABtn.addActionListener(e -> {
+			try {
+				KeyPair kp = RSAUtil.generateKeyPair(2048);
+				privateKeyA = kp.getPrivate();
+				publicKeyA = kp.getPublic();
+
+				// 更新显示
+				pubKeyAText.setText("公钥（Base64）:\n" + Base64.getEncoder().encodeToString(publicKeyA.getEncoded()));
+				privKeyAText.setText("私钥（Base64）:\n" + Base64.getEncoder().encodeToString(privateKeyA.getEncoded()));
+
+				JOptionPane.showMessageDialog(this, "✅ A的密钥对生成成功！");
+			} catch (Exception ex) {
+				JOptionPane.showMessageDialog(this, "❌ 生成失败: " + ex.getMessage());
+			}
+		});
+
+		// 生成B的密钥对
+		genKeyBBtn.addActionListener(e -> {
+			try {
+				KeyPair kp = RSAUtil.generateKeyPair(2048);
+				privateKeyB = kp.getPrivate();
+				publicKeyB = kp.getPublic();
+
+				// 更新显示
+				pubKeyBText.setText("公钥（Base64）:\n" + Base64.getEncoder().encodeToString(publicKeyB.getEncoded()));
+				privKeyBText.setText("私钥（Base64）:\n" + Base64.getEncoder().encodeToString(privateKeyB.getEncoded()));
+
+				JOptionPane.showMessageDialog(this, "✅ B的密钥对生成成功！");
+			} catch (Exception ex) {
+				JOptionPane.showMessageDialog(this, "❌ 生成失败: " + ex.getMessage());
+			}
+		});
+
+		// Hash计算
+		hashBtn.addActionListener(e -> {
+			String text = inputArea.getText();
+			if (text.isEmpty()) {
+				JOptionPane.showMessageDialog(this, "请输入文本！");
+				return;
+			}
+
+			String algo = (String) hashBox.getSelectedItem();
+			String hash;
+			if ("MD5".equals(algo)) {
+				hash = HashUtil.md5(text);
+			} else {
+				hash = HashUtil.sha256(text);
+			}
+			outputArea.setText("Hash值（" + algo + "）:\n" + hash);
+		});
+
+//        // 文件Hash
 //        fileHashBtn.addActionListener(e -> {
 //            JFileChooser chooser = new JFileChooser();
 //            if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
@@ -609,273 +1374,296 @@ public class MainFrame extends JFrame {
 //                outputArea.setText("文件Hash (" + algo + "):\n" + hash);
 //            }
 //        });
-        
-        // 对称加密
-        encBtn.addActionListener(e -> {
-            try {
-                String text = inputArea.getText();
-                String key = keyField.getText();
-                if (text.isEmpty() || key.isEmpty()) {
-                    JOptionPane.showMessageDialog(this, "请先输入文本和生成密钥！");
-                    return;
-                }
-                
-                byte[] data = text.getBytes("UTF-8");
-                byte[] cipher = null;
-                
-                String algo = (String) symBox.getSelectedItem();
-                if ("AES".equals(algo)) {
-                    cipher = SymmetricCrypto.encryptAES(data, key);
-                } else {
-                    cipher = SymmetricCrypto.encryptDES(data, key);
-                }
-                
-                outputArea.setText(bytesToHex(cipher));
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "加密失败: " + ex.getMessage());
-            }
-        });
-        
-        // 对称解密
-        decBtn.addActionListener(e -> {
-            try {
-                String hex = inputArea.getText();
-                String key = keyField.getText();
-                
-                if (hex.isEmpty() || key.isEmpty()) {
-                    JOptionPane.showMessageDialog(this, "请先输入密文和密钥！");
-                    return;
-                }
-                
-                byte[] data = hexToBytes(hex);
-                byte[] plain = null;
-                
-                String algo = (String) symBox.getSelectedItem();
-                if ("AES".equals(algo)) {
-                    plain = SymmetricCrypto.decryptAES(data, key);
-                } else {
-                    plain = SymmetricCrypto.decryptDES(data, key);
-                }
-                
-                outputArea.setText(new String(plain, "UTF-8"));
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "解密失败: " + ex.getMessage());
-            }
-        });
-        
-        // 文件加密
-        fileEncBtn.addActionListener(e -> {
-            JFileChooser chooser = new JFileChooser();
-            if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-                File file = chooser.getSelectedFile();
-                byte[] data = FileUtil.readFile(file);
-                
-                String key = keyField.getText();
-                if (key.isEmpty()) {
-                    JOptionPane.showMessageDialog(this, "请先生成对称密钥！");
-                    return;
-                }
-                
-                try {
-                    byte[] cipher;
-                    if ("AES".equals(symBox.getSelectedItem())) {
-                        cipher = SymmetricCrypto.encryptAES(data, key);
-                    } else {
-                        cipher = SymmetricCrypto.encryptDES(data, key);
-                    }
-                    
-                    File save = new File(file.getAbsolutePath() + ".enc");
-                    FileUtil.saveFile(cipher, save);
-                    JOptionPane.showMessageDialog(this, "文件已加密: " + save.getName());
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(this, "加密失败: " + ex.getMessage());
-                }
-            }
-        });
-        
-        // 文件解密
-        fileDecBtn.addActionListener(e -> {
-            JFileChooser chooser = new JFileChooser();
-            if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-                File file = chooser.getSelectedFile();
-                byte[] data = FileUtil.readFile(file);
-                
-                String key = keyField.getText();
-                if (key.isEmpty()) {
-                    JOptionPane.showMessageDialog(this, "请先生成对称密钥！");
-                    return;
-                }
-                
-                try {
-                    byte[] plain;
-                    if ("AES".equals(symBox.getSelectedItem())) {
-                        plain = SymmetricCrypto.decryptAES(data, key);
-                    } else {
-                        plain = SymmetricCrypto.decryptDES(data, key);
-                    }
-                    
-                    String originalName = file.getName();
-                    if (originalName.endsWith(".enc")) {
-                        originalName = originalName.substring(0, originalName.length() - 4);
-                    }
-                    File save = new File(file.getParent(), "decrypted_" + originalName);
-                    FileUtil.saveFile(plain, save);
-                    JOptionPane.showMessageDialog(this, "文件已解密: " + save.getName());
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(this, "解密失败: " + ex.getMessage());
-                }
-            }
-        });
-        
-        // 签名
-        signBtn.addActionListener(e -> {
-            if (privateKeyA == null) {
-                JOptionPane.showMessageDialog(this, "请先生成A的密钥对！");
-                return;
-            }
-            
-            String text = inputArea.getText();
-            if (text.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "请输入文本！");
-                return;
-            }
-            
-            String algo = (String) hashBox.getSelectedItem();
-            String hash;
-            if ("MD5".equals(algo)) {
-                hash = HashUtil.md5(text);
-            } else {
-                hash = HashUtil.sha256(text);
-            }
-            
-            try {
-                byte[] sign = SignUtil.sign(hash, privateKeyA);
-                signatureArea.setText(bytesToHex(sign));
-                outputArea.setText("签名完成（" + algo + "）");
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "签名失败: " + ex.getMessage());
-            }
-        });
-        
-        // 验证签名
-        verifyBtn.addActionListener(e -> {
-            if (publicKeyA == null) {
-                JOptionPane.showMessageDialog(this, "请先生成A的密钥对！");
-                return;
-            }
-            
-            String text = inputArea.getText();
-            String signHex = signatureArea.getText();
-            if (text.isEmpty() || signHex.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "请先输入文本和签名！");
-                return;
-            }
-            
-            String algo = (String) hashBox.getSelectedItem();
-            String hash;
-            if ("MD5".equals(algo)) {
-                hash = HashUtil.md5(text);
-            } else {
-                hash = HashUtil.sha256(text);
-            }
-            
-            try {
-                boolean ok = SignUtil.verify(hash, hexToBytes(signHex), publicKeyA);
-                outputArea.setText(ok ? "✓ 签名验证成功" : "✗ 签名验证失败");
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "验证失败: " + ex.getMessage());
-            }
-        });
-    }
-    
-    /**
-     * 设置密钥管理事件监听器
-     */
-    private void setupKeyEventListeners(JButton genKeyABtn, JButton saveKeyABtn, JButton loadKeyABtn,
-                                       JButton genKeyBBtn, JButton saveKeyBBtn, JButton loadKeyBBtn) {
-        
-        // 生成A的密钥
-        genKeyABtn.addActionListener(e -> {
-            KeyPair kp = RSAUtil.generateKeyPair(2048);
-            privateKeyA = kp.getPrivate();
-            publicKeyA = kp.getPublic();
-            
-            pubKeyAText.setText("公钥（Base64）:\n" + 
-                Base64.getEncoder().encodeToString(publicKeyA.getEncoded()));
-            privKeyAText.setText("私钥（Base64）:\n" + 
-                Base64.getEncoder().encodeToString(privateKeyA.getEncoded()));
-            
-            JOptionPane.showMessageDialog(this, "A的密钥对生成成功！");
-        });
-        
-        // 保存A的密钥
-        saveKeyABtn.addActionListener(e -> {
-            if (privateKeyA == null || publicKeyA == null) {
-                JOptionPane.showMessageDialog(this, "请先生成A的密钥对！");
-                return;
-            }
-            
-            JFileChooser chooser = new JFileChooser();
-            chooser.setDialogTitle("保存A的私钥");
-            if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-                File file = chooser.getSelectedFile();
-                byte[] keyData = privateKeyA.getEncoded();
-                FileUtil.saveFile(keyData, file);
-                JOptionPane.showMessageDialog(this, "私钥已保存到: " + file.getName());
-            }
-        });
-        
-        // 生成B的密钥
-        genKeyBBtn.addActionListener(e -> {
-            KeyPair kp = RSAUtil.generateKeyPair(2048);
-            privateKeyB = kp.getPrivate();
-            publicKeyB = kp.getPublic();
-            
-            pubKeyBText.setText("公钥（Base64）:\n" + 
-                Base64.getEncoder().encodeToString(publicKeyB.getEncoded()));
-            privKeyBText.setText("私钥（Base64）:\n" + 
-                Base64.getEncoder().encodeToString(privateKeyB.getEncoded()));
-            
-            JOptionPane.showMessageDialog(this, "B的密钥对生成成功！");
-        });
-    }
-    
-    /**
-     * 工具函数：字节数组转十六进制字符串
-     */
-    private static String bytesToHex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
-        for (byte b : bytes) {
-            sb.append(String.format("%02x", b));
-        }
-        return sb.toString();
-    }
-    
-    /**
-     * 工具函数：十六进制字符串转字节数组
-     */
-    private static byte[] hexToBytes(String hex) {
-        int len = hex.length();
-        byte[] result = new byte[len / 2];
-        for (int i = 0; i < len; i += 2) {
-            result[i / 2] = (byte) Integer.parseInt(hex.substring(i, i + 2), 16);
-        }
-        return result;
-    }
-    
-    /**
-     * 主方法
-     */
-    public static void main(String[] args) {
-        // 设置界面风格
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        
-        SwingUtilities.invokeLater(() -> {
-            new MainFrame();
-        });
-    }
+
+		// 对称加密
+		encBtn.addActionListener(e -> {
+			try {
+				String text = inputArea.getText();
+				String key = keyField.getText();
+				if (text.isEmpty() || key.isEmpty()) {
+					JOptionPane.showMessageDialog(this, "请先输入文本和生成密钥！");
+					return;
+				}
+
+				byte[] data = text.getBytes("UTF-8");
+				byte[] cipher = null;
+
+				String algo = (String) symBox.getSelectedItem();
+				if ("AES".equals(algo)) {
+					cipher = SymmetricCrypto.encryptAES(data, key);
+				} else {
+					cipher = SymmetricCrypto.encryptDES(data, key);
+				}
+
+				outputArea.setText("加密结果（Hex）:\n" + bytesToHex(cipher));
+			} catch (Exception ex) {
+				JOptionPane.showMessageDialog(this, "❌ 加密失败: " + ex.getMessage());
+			}
+		});
+
+		// 对称解密
+		decBtn.addActionListener(e -> {
+			try {
+				String hex = inputArea.getText();
+				String key = keyField.getText();
+
+				if (hex.isEmpty() || key.isEmpty()) {
+					JOptionPane.showMessageDialog(this, "请先输入密文和密钥！");
+					return;
+				}
+
+				byte[] data = hexToBytes(hex);
+				byte[] plain = null;
+
+				String algo = (String) symBox.getSelectedItem();
+				if ("AES".equals(algo)) {
+					plain = SymmetricCrypto.decryptAES(data, key);
+				} else {
+					plain = SymmetricCrypto.decryptDES(data, key);
+				}
+
+				outputArea.setText("解密结果:\n" + new String(plain, "UTF-8"));
+			} catch (Exception ex) {
+				JOptionPane.showMessageDialog(this, "❌ 解密失败: " + ex.getMessage());
+			}
+		});
+
+		// 文件加密
+		fileEncBtn.addActionListener(e -> {
+			JFileChooser chooser = new JFileChooser();
+			if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+				File file = chooser.getSelectedFile();
+				byte[] data = FileUtil.readFile(file);
+
+				String key = keyField.getText();
+				if (key.isEmpty()) {
+					JOptionPane.showMessageDialog(this, "请先生成对称密钥！");
+					return;
+				}
+
+				try {
+					byte[] cipher;
+					if ("AES".equals(symBox.getSelectedItem())) {
+						cipher = SymmetricCrypto.encryptAES(data, key);
+					} else {
+						cipher = SymmetricCrypto.encryptDES(data, key);
+					}
+
+					File save = new File(file.getAbsolutePath() + ".enc");
+					FileUtil.saveFile(cipher, save);
+					JOptionPane.showMessageDialog(this, "✅ 文件已加密: " + save.getName());
+				} catch (Exception ex) {
+					JOptionPane.showMessageDialog(this, "❌ 加密失败: " + ex.getMessage());
+				}
+			}
+		});
+
+		// 文件解密
+		fileDecBtn.addActionListener(e -> {
+			JFileChooser chooser = new JFileChooser();
+			if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+				File file = chooser.getSelectedFile();
+				byte[] data = FileUtil.readFile(file);
+
+				String key = keyField.getText();
+				if (key.isEmpty()) {
+					JOptionPane.showMessageDialog(this, "请先生成对称密钥！");
+					return;
+				}
+
+				try {
+					byte[] plain;
+					if ("AES".equals(symBox.getSelectedItem())) {
+						plain = SymmetricCrypto.decryptAES(data, key);
+					} else {
+						plain = SymmetricCrypto.decryptDES(data, key);
+					}
+
+					String originalName = file.getName();
+					if (originalName.endsWith(".enc")) {
+						originalName = originalName.substring(0, originalName.length() - 4);
+					}
+					File save = new File(file.getParent(), "decrypted_" + originalName);
+					FileUtil.saveFile(plain, save);
+					JOptionPane.showMessageDialog(this, "✅ 文件已解密: " + save.getName());
+				} catch (Exception ex) {
+					JOptionPane.showMessageDialog(this, "❌ 解密失败: " + ex.getMessage());
+				}
+			}
+		});
+
+		// 签名（基础版）
+		signBtn.addActionListener(e -> {
+			if (privateKeyA == null) {
+				JOptionPane.showMessageDialog(this, "请先生成A的密钥对！");
+				return;
+			}
+
+			String text = inputArea.getText();
+			if (text.isEmpty()) {
+				JOptionPane.showMessageDialog(this, "请输入文本！");
+				return;
+			}
+
+			String algo = (String) hashBox.getSelectedItem();
+			String hash;
+			if ("MD5".equals(algo)) {
+				hash = HashUtil.md5(text);
+			} else {
+				hash = HashUtil.sha256(text);
+			}
+
+			try {
+				byte[] sign = SignUtil.sign(hash, privateKeyA);
+				signatureArea.setText(Base64.getEncoder().encodeToString(sign));
+				outputArea.setText("签名完成（" + algo + "）:\n" + Base64.getEncoder().encodeToString(sign).substring(0,
+						Math.min(50, Base64.getEncoder().encodeToString(sign).length())) + "...");
+			} catch (Exception ex) {
+				JOptionPane.showMessageDialog(this, "❌ 签名失败: " + ex.getMessage());
+			}
+		});
+
+		// 验证签名（基础版）
+		verifyBtn.addActionListener(e -> {
+			if (publicKeyA == null) {
+				JOptionPane.showMessageDialog(this, "请先生成A的密钥对！");
+				return;
+			}
+
+			String text = inputArea.getText();
+			String signBase64 = signatureArea.getText();
+			if (text.isEmpty() || signBase64.isEmpty()) {
+				JOptionPane.showMessageDialog(this, "请先输入文本和签名！");
+				return;
+			}
+
+			String algo = (String) hashBox.getSelectedItem();
+			String hash;
+			if ("MD5".equals(algo)) {
+				hash = HashUtil.md5(text);
+			} else {
+				hash = HashUtil.sha256(text);
+			}
+
+			try {
+				byte[] signature = Base64.getDecoder().decode(signBase64);
+				boolean ok = SignUtil.verify(hash, signature, publicKeyA);
+				outputArea.setText(ok ? "✅ 签名验证成功" : "❌ 签名验证失败");
+			} catch (Exception ex) {
+				JOptionPane.showMessageDialog(this, "❌ 验证失败: " + ex.getMessage());
+			}
+		});
+	}
+
+	/**
+	 * 设置密钥管理事件监听器（保持不变）
+	 */
+	private void setupKeyEventListeners(JButton genKeyABtn, JButton saveKeyABtn, JButton loadKeyABtn,
+			JButton showPubKeyABtn, JButton genKeyBBtn, JButton saveKeyBBtn, JButton loadKeyBBtn,
+			JButton showPubKeyBBtn) {
+
+		// 生成A的密钥
+		genKeyABtn.addActionListener(e -> {
+			try {
+				KeyPair kp = RSAUtil.generateKeyPair(2048);
+				privateKeyA = kp.getPrivate();
+				publicKeyA = kp.getPublic();
+
+				pubKeyAText.setText("公钥（Base64）:\n" + Base64.getEncoder().encodeToString(publicKeyA.getEncoded()));
+				privKeyAText.setText("私钥（Base64）:\n" + Base64.getEncoder().encodeToString(privateKeyA.getEncoded()));
+
+				JOptionPane.showMessageDialog(this, "✅ A的密钥对生成成功！");
+			} catch (Exception ex) {
+				JOptionPane.showMessageDialog(this, "❌ 生成失败: " + ex.getMessage());
+			}
+		});
+
+		// 显示A的公钥详情
+		showPubKeyABtn.addActionListener(e -> {
+			if (publicKeyA == null) {
+				JOptionPane.showMessageDialog(this, "请先生成A的密钥对！");
+				return;
+			}
+
+			String pubKeyStr = Base64.getEncoder().encodeToString(publicKeyA.getEncoded());
+			JTextArea detailArea = new JTextArea(pubKeyStr);
+			detailArea.setEditable(false);
+			JScrollPane scrollPane = new JScrollPane(detailArea);
+			scrollPane.setPreferredSize(new Dimension(600, 400));
+
+			JOptionPane.showMessageDialog(this, scrollPane, "A的公钥详情", JOptionPane.INFORMATION_MESSAGE);
+		});
+
+		// 生成B的密钥
+		genKeyBBtn.addActionListener(e -> {
+			try {
+				KeyPair kp = RSAUtil.generateKeyPair(2048);
+				privateKeyB = kp.getPrivate();
+				publicKeyB = kp.getPublic();
+
+				pubKeyBText.setText("公钥（Base64）:\n" + Base64.getEncoder().encodeToString(publicKeyB.getEncoded()));
+				privKeyBText.setText("私钥（Base64）:\n" + Base64.getEncoder().encodeToString(privateKeyB.getEncoded()));
+
+				JOptionPane.showMessageDialog(this, "✅ B的密钥对生成成功！");
+			} catch (Exception ex) {
+				JOptionPane.showMessageDialog(this, "❌ 生成失败: " + ex.getMessage());
+			}
+		});
+
+		// 显示B的公钥详情
+		showPubKeyBBtn.addActionListener(e -> {
+			if (publicKeyB == null) {
+				JOptionPane.showMessageDialog(this, "请先生成B的密钥对！");
+				return;
+			}
+
+			String pubKeyStr = Base64.getEncoder().encodeToString(publicKeyB.getEncoded());
+			JTextArea detailArea = new JTextArea(pubKeyStr);
+			detailArea.setEditable(false);
+			JScrollPane scrollPane = new JScrollPane(detailArea);
+			scrollPane.setPreferredSize(new Dimension(600, 400));
+
+			JOptionPane.showMessageDialog(this, scrollPane, "B的公钥详情", JOptionPane.INFORMATION_MESSAGE);
+		});
+	}
+
+	/**
+	 * 工具函数：字节数组转十六进制字符串
+	 */
+	private static String bytesToHex(byte[] bytes) {
+		StringBuilder sb = new StringBuilder();
+		for (byte b : bytes) {
+			sb.append(String.format("%02x", b));
+		}
+		return sb.toString();
+	}
+
+	/**
+	 * 工具函数：十六进制字符串转字节数组
+	 */
+	private static byte[] hexToBytes(String hex) {
+		int len = hex.length();
+		byte[] result = new byte[len / 2];
+		for (int i = 0; i < len; i += 2) {
+			result[i / 2] = (byte) Integer.parseInt(hex.substring(i, i + 2), 16);
+		}
+		return result;
+	}
+
+	/**
+	 * 主方法
+	 */
+	public static void main(String[] args) {
+		// 设置界面风格
+		try {
+			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		SwingUtilities.invokeLater(() -> {
+			MainFrame frame = new MainFrame();
+			frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+		});
+	}
 }
