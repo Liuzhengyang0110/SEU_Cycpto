@@ -72,7 +72,7 @@ public class MainFrame extends JFrame {
 		JPanel mainPanel = new JPanel(new BorderLayout());
 
 		// 顶部标题
-		JLabel title = new JLabel("密码学课程大作业 - 混合加密系统（对称+非对称）", JLabel.CENTER);
+		JLabel title = new JLabel("密码学课程大作业 - 混合加密系统", JLabel.CENTER);
 		title.setFont(new Font("宋体", Font.BOLD, 22));
 		title.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
 		mainPanel.add(title, BorderLayout.NORTH);
@@ -88,9 +88,6 @@ public class MainFrame extends JFrame {
 
 		// 选项卡3: 密钥管理
 		tabbedPane.addTab("密钥管理", createKeyPanel());
-
-		// 选项卡4: 流程图解
-		tabbedPane.addTab("流程图解", createDiagramPanel());
 
 		mainPanel.add(tabbedPane, BorderLayout.CENTER);
 
@@ -110,7 +107,6 @@ public class MainFrame extends JFrame {
 	 * 创建基础功能面板
 	 */
 	private JPanel createBasicPanel() {
-		// 保持不变...
 		return createBasicPanelContent();
 	}
 
@@ -248,7 +244,7 @@ public class MainFrame extends JFrame {
 	}
 	
 	/**
-	 * 修改 createHybridFlowPanel 方法中的步骤面板创建
+	 * createHybridFlowPanel 方法中的步骤面板创建
 	 */	
 	private JPanel createHybridFlowPanel() {
 	    JPanel panel = new JPanel();
@@ -288,7 +284,7 @@ public class MainFrame extends JFrame {
 	    messagePanel.setBorder(BorderFactory.createTitledBorder("当前加密的消息"));
 	    JTextArea messageDisplay = new JTextArea(2, 50);
 	    messageDisplay.setEditable(false);
-	    messageDisplay.setText(currentMessage.isEmpty() ? "请在左侧输入消息" : currentMessage);
+	    messageDisplay.setText(currentMessage.isEmpty() ? "请在基础功能面板输入待加密的消息" : currentMessage);
 	    messageDisplay.setFont(new Font("等线", Font.PLAIN, 12));
 	    messageDisplay.setBackground(new Color(255, 255, 240));
 	    messagePanel.add(new JScrollPane(messageDisplay), BorderLayout.CENTER);
@@ -1179,74 +1175,9 @@ public class MainFrame extends JFrame {
 		return panel;
 	}
 
-	/**
-	 * 创建流程图解面板（更新为混合加密）
-	 */
-	private JPanel createDiagramPanel() {
-		JPanel panel = new JPanel(new BorderLayout());
-
-		// 创建图示文本
-		String diagram = "╔══════════════════════════════════════════════════════════════════════╗\n"
-				+ "║                   混合加密系统 - 完整通信流程图解                    ║\n"
-				+ "╚══════════════════════════════════════════════════════════════════════╝\n\n"
-				+ "                         ┌─────────┐\n" + "                         │   明文M  │\n"
-				+ "                         └────┬────┘\n" + "                              │\n"
-				+ "                         ┌────▼────┐\n" + "                   步骤1 │  H(M)   │ 计算Hash\n"
-				+ "                         └────┬────┘\n" + "                              │\n"
-				+ "                         ┌────▼────┐\n" + "                   步骤2 │ Sig(RKa)│ A的私钥签名 → S\n"
-				+ "                         └────┬────┘\n" + "                              │\n"
-				+ "                    ┌─────────┴─────────┐\n" + "                    ▼                   ▼\n"
-				+ "               ┌─────────┐       ┌─────────┐\n" + "               │    M     │       │    S     │\n"
-				+ "               └────┬────┘       └────┬────┘\n" + "                    │                  │\n"
-				+ "                    └────────┬─────────┘\n" + "                   步骤3     │   组合 M || S\n"
-				+ "                         ┌───▼───┐\n" + "               ┌────────►│ 生成K  │ 生成对称密钥\n"
-				+ "               │         └───┬───┘\n" + "               │             │\n"
-				+ "         ┌─────▼─────┐ ┌────▼─────┐\n" + "   步骤5 │ E(UKb, K) │ │ E(K, M||S) │ 步骤4\n"
-				+ "         └─────┬─────┘ └────┬─────┘\n" + "               │             │\n"
-				+ "               └─────┬───────┘\n" + "                     │  发送：E(UKb, K) || E(K, M||S)\n"
-				+ "               ┌─────▼─────────────────────┐\n" + "               │            B接收            │\n"
-				+ "               └─────┬─────────────────────┘\n" + "               ┌─────▼─────┐ ┌────▼─────┐\n"
-				+ "         步骤6 │ D(RKb, K) │ │ D(K, M||S) │ 步骤7\n" + "               └─────┬─────┘ └────┬─────┘\n"
-				+ "                     │             │\n" + "               ┌─────▼────────────▼─────┐\n"
-				+ "               │     分离 M 和 S        │ 步骤8\n" + "               └─────┬────────────┬─────┘\n"
-				+ "                     │            │\n" + "               ┌─────▼────┐ ┌────▼────┐\n"
-				+ "               │    M     │ │    S     │\n" + "               └────┬────┘ └────┬────┘\n"
-				+ "                    │            │\n" + "               ┌────▼────┐      │\n"
-				+ "               │  H(M)   │      │\n" + "               └────┬────┘      │\n"
-				+ "                    │           │\n" + "               ┌────▼───────────▼────┐\n"
-				+ "         步骤9 │  Ver(UKa, H(M), S)  │ 验证签名\n" + "               └─────────┬───────────┘\n"
-				+ "                         │\n" + "               ┌─────────▼─────────────┐\n"
-				+ "               │     验证成功/失败      │\n" + "               └───────────────────────┘\n\n"
-				+ "════════════════════════════ 符号说明 ════════════════════════════\n"
-				+ "  M: 明文消息           K: 对称密钥（AES/DES）\n" + "  H: Hash函数           RKa: A的私钥        UKa: A的公钥\n"
-				+ "  S: 数字签名           RKb: B的私钥        UKb: B的公钥\n" + "  ||: 组合操作          E(): 加密算法       D(): 解密算法\n"
-				+ "  Sig(): 签名算法       Ver(): 验证算法\n"
-				+ "══════════════════════════════════════════════════════════════════\n";
-
-		diagramArea = new JTextArea(diagram);
-		diagramArea.setEditable(false);
-		diagramArea.setFont(new Font("等线", Font.PLAIN, 12));
-		diagramArea.setBackground(new Color(250, 250, 250));
-		diagramArea.setForeground(new Color(30, 30, 30));
-
-		// 添加说明
-		JPanel bottomPanel = new JPanel(new BorderLayout());
-		JTextArea noteArea = new JTextArea("📌 混合加密系统关键点：\n" + "1. 对称加密速度快，用于加密大量数据（M || S）\n"
-				+ "2. RSA加密安全，用于加密短小的对称密钥K\n" + "3. 发送数据：E(UKb, K) || E(K, M||S)\n" + "4. 接收方先用RSA解密出K，再用K解密M||S\n"
-				+ "5. 最后验证签名确认消息来源和完整性\n" + "6. 结合了对称加密的速度和非对称加密的安全性");
-		noteArea.setEditable(false);
-		noteArea.setFont(new Font("等线", Font.PLAIN, 12));
-		noteArea.setBackground(new Color(255, 255, 200));
-		noteArea.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-		panel.add(new JScrollPane(diagramArea), BorderLayout.CENTER);
-		panel.add(noteArea, BorderLayout.SOUTH);
-
-		return panel;
-	}
 
 	/**
-	 * 设置基础功能事件监听器（保持不变）
+	 * 设置基础功能事件监听器
 	 */
 	private void setupBasicEventListeners(JButton genKeyBtn, JButton genKeyABtn, JButton genKeyBBtn, JButton hashBtn,
 			JButton fileHashBtn, JButton encBtn, JButton decBtn, JButton fileEncBtn, JButton fileDecBtn,
@@ -1316,23 +1247,23 @@ public class MainFrame extends JFrame {
 			outputArea.setText("Hash值（" + algo + "）:\n" + hash);
 		});
 
-//        // 文件Hash
-//        fileHashBtn.addActionListener(e -> {
-//            JFileChooser chooser = new JFileChooser();
-//            if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-//                File file = chooser.getSelectedFile();
-//                byte[] data = FileUtil.readFile(file);
-//                
-//                String algo = (String) hashBox.getSelectedItem();
-//                String hash;
-//                if ("MD5".equals(algo)) {
-//                    hash = HashUtil.md5(data);
-//                } else {
-//                    hash = HashUtil.sha256(data);
-//                }
-//                outputArea.setText("文件Hash (" + algo + "):\n" + hash);
-//            }
-//        });
+        // 文件Hash
+        fileHashBtn.addActionListener(e -> {
+            JFileChooser chooser = new JFileChooser();
+            if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                File file = chooser.getSelectedFile();
+                byte[] data = FileUtil.readFile(file);
+                
+                String algo = (String) hashBox.getSelectedItem();
+                String hash;
+                if ("MD5".equals(algo)) {
+                    hash = HashUtil.md5(data);
+                } else {
+                    hash = HashUtil.sha256(data);
+                }
+                outputArea.setText("文件Hash (" + algo + "):\n" + hash);
+            }
+        });
 
 		// 对称加密
 		encBtn.addActionListener(e -> {
@@ -1512,6 +1443,187 @@ public class MainFrame extends JFrame {
 				JOptionPane.showMessageDialog(this, "❌ 验证失败: " + ex.getMessage());
 			}
 		});
+		
+	    // 文件签名功能
+	    fileSignBtn.addActionListener(e -> {
+	        if (privateKeyA == null) {
+	            JOptionPane.showMessageDialog(this, "请先生成A的密钥对！");
+	            return;
+	        }
+	        
+	        JFileChooser chooser = new JFileChooser();
+	        chooser.setDialogTitle("选择要签名的文件");
+	        if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+	            File file = chooser.getSelectedFile();
+	            
+	            try {
+	                // 读取文件内容
+	                byte[] fileData = FileUtil.readFile(file);
+	                
+	                // 计算文件的Hash
+	                String algo = (String) hashBox.getSelectedItem();
+	                String hash;
+	                if ("MD5".equals(algo)) {
+	                    hash = HashUtil.md5(fileData);
+	                } else {
+	                    hash = HashUtil.sha256(fileData);
+	                }
+	                
+	                // 用A的私钥签名
+	                byte[] signature = SignUtil.sign(hash, privateKeyA);
+	                String signatureBase64 = Base64.getEncoder().encodeToString(signature);
+	                
+	                // 保存签名到文件（原文件名.sig）
+	                File sigFile = new File(file.getParent(), file.getName() + ".sig");
+	                FileUtil.saveFile(signatureBase64.getBytes("UTF-8"), sigFile);
+	                
+	                // 同时保存签名信息到文本文件，便于查看
+	                File sigInfoFile = new File(file.getParent(), file.getName() + "_signature.txt");
+	                String sigInfo = 
+	                    "文件签名信息\n" +
+	                    "=============\n" +
+	                    "文件名: " + file.getName() + "\n" +
+	                    "文件大小: " + file.length() + " 字节\n" +
+	                    "Hash算法: " + algo + "\n" +
+	                    "Hash值: " + hash + "\n" +
+	                    "签名时间: " + new java.util.Date() + "\n" +
+	                    "签名长度: " + signature.length + " 字节\n" +
+	                    "签名(Base64): " + signatureBase64 + "\n" +
+	                    "签名文件: " + sigFile.getName();
+	                
+	                FileUtil.saveFile(sigInfo.getBytes("UTF-8"), sigInfoFile);
+	                
+	                // 显示结果
+	                outputArea.setText(
+	                    "✅ 文件签名完成\n" +
+	                    "文件: " + file.getName() + "\n" +
+	                    "文件大小: " + file.length() + " 字节\n" +
+	                    "Hash算法: " + algo + "\n" +
+	                    "Hash值: " + hash.substring(0, Math.min(30, hash.length())) + "...\n" +
+	                    "签名长度: " + signature.length + " 字节\n" +
+	                    "签名文件: " + sigFile.getName() + "\n" +
+	                    "签名信息文件: " + sigInfoFile.getName()
+	                );
+	                
+	                JOptionPane.showMessageDialog(this, 
+	                    "<html><div style='text-align: center;'>" +
+	                    "<h3>✅ 文件签名完成</h3>" +
+	                    "<p>文件: " + file.getName() + "</p>" +
+	                    "<p>签名文件: " + sigFile.getName() + "</p>" +
+	                    "</div></html>");
+	                
+	            } catch (Exception ex) {
+	                JOptionPane.showMessageDialog(this, "❌ 文件签名失败: " + ex.getMessage());
+	            }
+	        }
+	    });
+	    
+	    // 验证文件签名功能
+	    fileVerifyBtn.addActionListener(e -> {
+	        if (publicKeyA == null) {
+	            JOptionPane.showMessageDialog(this, "请先生成A的密钥对！");
+	            return;
+	        }
+	        
+	        // 第一步：选择原始文件
+	        JFileChooser fileChooser = new JFileChooser();
+	        fileChooser.setDialogTitle("选择要验证的原始文件");
+	        if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+	            File originalFile = fileChooser.getSelectedFile();
+	            
+	            // 第二步：选择签名文件（自动建议文件名.sig）
+	            JFileChooser sigChooser = new JFileChooser(originalFile.getParent());
+	            File suggestedSigFile = new File(originalFile.getParent(), originalFile.getName() + ".sig");
+	            if (suggestedSigFile.exists()) {
+	                sigChooser.setSelectedFile(suggestedSigFile);
+	            }
+	            sigChooser.setDialogTitle("选择签名文件（通常为" + originalFile.getName() + ".sig）");
+	            
+	            if (sigChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+	                File sigFile = sigChooser.getSelectedFile();
+	                
+	                try {
+	                    // 读取原始文件内容
+	                    byte[] fileData = FileUtil.readFile(originalFile);
+	                    
+	                    // 计算文件的Hash
+	                    String algo = (String) hashBox.getSelectedItem();
+	                    String hash;
+	                    if ("MD5".equals(algo)) {
+	                        hash = HashUtil.md5(fileData);
+	                    } else {
+	                        hash = HashUtil.sha256(fileData);
+	                    }
+	                    
+	                    // 读取签名文件
+	                    byte[] sigData = FileUtil.readFile(sigFile);
+	                    String signatureBase64 = new String(sigData, "UTF-8").trim();
+	                    byte[] signature = Base64.getDecoder().decode(signatureBase64);
+	                    
+	                    // 用A的公钥验证签名
+	                    boolean verified = SignUtil.verify(hash, signature, publicKeyA);
+	                    
+	                    // 构建详细结果
+	                    StringBuilder result = new StringBuilder();
+	                    result.append("🔍 文件签名验证结果\n");
+	                    result.append("==================\n\n");
+	                    result.append("原始文件: ").append(originalFile.getName()).append("\n");
+	                    result.append("文件大小: ").append(originalFile.length()).append(" 字节\n");
+	                    result.append("签名文件: ").append(sigFile.getName()).append("\n");
+	                    result.append("Hash算法: ").append(algo).append("\n");
+	                    result.append("Hash值: ").append(hash).append("\n\n");
+	                    
+	                    if (verified) {
+	                        result.append("✅ 签名验证成功！\n\n");
+	                        result.append("验证结论：\n");
+	                        result.append("✓ 文件确实来自A（签名者）\n");
+	                        result.append("✓ 文件在签名后未被篡改\n");
+	                        result.append("✓ 文件的完整性和真实性得到保证\n");
+	                        result.append("✓ 可以信任此文件\n");
+	                        
+	                        // 检查是否有签名信息文件
+	                        File sigInfoFile = new File(originalFile.getParent(), originalFile.getName() + "_signature.txt");
+	                        if (sigInfoFile.exists()) {
+	                            byte[] infoData = FileUtil.readFile(sigInfoFile);
+	                            String info = new String(infoData, "UTF-8");
+	                            result.append("\n📄 签名信息文件内容：\n");
+	                            result.append(info);
+	                        }
+	                    } else {
+	                        result.append("❌ 签名验证失败！\n\n");
+	                        result.append("可能的原因：\n");
+	                        result.append("✗ 文件在签名后被篡改\n");
+	                        result.append("✗ 签名者不是A\n");
+	                        result.append("✗ 签名文件损坏或不匹配\n");
+	                        result.append("✗ 使用的公钥不正确\n");
+	                        result.append("\n⚠️ 警告：此文件可能不可信！");
+	                    }
+	                    
+	                    outputArea.setText(result.toString());
+	                    
+	                    // 弹出验证结果对话框
+	                    if (verified) {
+	                        JOptionPane.showMessageDialog(this,
+	                            "<html><div style='text-align: center;'>" +
+	                            "<h3 style='color: green;'>✅ 签名验证成功</h3>" +
+	                            "<p>文件: " + originalFile.getName() + "</p>" +
+	                            "<p>文件完整性得到保证</p>" +
+	                            "</div></html>");
+	                    } else {
+	                        JOptionPane.showMessageDialog(this,
+	                            "<html><div style='text-align: center;'>" +
+	                            "<h3 style='color: red;'>❌ 签名验证失败</h3>" +
+	                            "<p>文件: " + originalFile.getName() + "</p>" +
+	                            "<p>文件可能被篡改</p>" +
+	                            "</div></html>");
+	                    }
+	                    
+	                } catch (Exception ex) {
+	                    JOptionPane.showMessageDialog(this, "❌ 验证文件签名失败: " + ex.getMessage());
+	                }
+	            }
+	        }
+	    });
 	}
 
 	/**

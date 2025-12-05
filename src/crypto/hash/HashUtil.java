@@ -1,67 +1,60 @@
 package crypto.hash;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 public class HashUtil {
-
-    // 字符串 MD5
+    
+    // 原有的字符串方法保持不变
     public static String md5(String input) {
-        return hashString(input, "MD5");
+        return hash(input, "MD5");
     }
-
-    // 字符串 SHA-256
+    
     public static String sha256(String input) {
-        return hashString(input, "SHA-256");
+        return hash(input, "SHA-256");
     }
-
-    private static String hashString(String input, String algo) {
+    
+    // 新增：字节数组方法
+    public static String md5(byte[] input) {
+        return hash(input, "MD5");
+    }
+    
+    public static String sha256(byte[] input) {
+        return hash(input, "SHA-256");
+    }
+    
+    // 字符串哈希的私有方法
+    private static String hash(String input, String algorithm) {
         try {
-            MessageDigest md = MessageDigest.getInstance(algo);
-            byte[] result = md.digest(input.getBytes("UTF-8"));
-            return bytesToHex(result);
+            MessageDigest digest = MessageDigest.getInstance(algorithm);
+            byte[] hashBytes = digest.digest(input.getBytes("UTF-8"));
+            return bytesToHex(hashBytes);
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new RuntimeException("Hash计算失败: " + e.getMessage(), e);
         }
     }
-
-    // 文件 MD5
-    public static String md5File(File file) {
-        return hashFile(file, "MD5");
-    }
-
-    // 文件 SHA-256
-    public static String sha256File(File file) {
-        return hashFile(file, "SHA-256");
-    }
-
-    private static String hashFile(File file, String algo) {
+    
+    // 字节数组哈希的私有方法
+    private static String hash(byte[] input, String algorithm) {
         try {
-            MessageDigest md = MessageDigest.getInstance(algo);
-            FileInputStream fis = new FileInputStream(file);
-
-            byte[] buffer = new byte[4096];
-            int len;
-            while ((len = fis.read(buffer)) != -1) {
-                md.update(buffer, 0, len);
-            }
-            fis.close();
-
-            return bytesToHex(md.digest());
+            MessageDigest digest = MessageDigest.getInstance(algorithm);
+            byte[] hashBytes = digest.digest(input);
+            return bytesToHex(hashBytes);
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new RuntimeException("Hash计算失败: " + e.getMessage(), e);
         }
     }
-
-    // byte[] 转 hex 字符串
+    
+    // 字节数组转十六进制字符串
     private static String bytesToHex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder hexString = new StringBuilder();
         for (byte b : bytes) {
-            sb.append(String.format("%02x", b));
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1) {
+                hexString.append('0');
+            }
+            hexString.append(hex);
         }
-        return sb.toString();
+        return hexString.toString();
     }
 }
